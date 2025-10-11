@@ -1,5 +1,4 @@
 
-
 -- người dùng hệ thống
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
