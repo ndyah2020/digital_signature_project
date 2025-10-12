@@ -6,6 +6,7 @@
 .env
 
 # IDE - VSCode
+/credentials.json
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
