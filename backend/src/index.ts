@@ -13,7 +13,7 @@ app.use(express.json());
 
 // Mount routes
 app.use("/auth", authRoutes);
-app.use(authMiddleware);
+// app.use(authMiddleware);
 
 app.use("/contracts", contractRoutes);
 // các route khác sau khi xác thực
