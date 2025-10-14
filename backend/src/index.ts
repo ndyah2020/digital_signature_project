@@ -1,12 +1,12 @@
 const express = require("express");
+const dotenv = require("dotenv");
+dotenv.config();
 const cors = require("cors");
 import { AppDataSource } from "./config/data_source";
-const dotenv = require("dotenv");
 import authRoutes from "./routes/auth.routes";
 import { authMiddleware } from "./middlewares/auth.middlewares";
 import contractRoutes from "./routes/contract.routes";
 
-dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
