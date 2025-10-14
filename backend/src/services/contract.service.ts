@@ -11,12 +11,12 @@ export class ContractService {
     description: string,
     createdBy: number
   ) {
-    // 1️Băm nội dung file (SHA-256)
+    // Băm nội dung file (SHA-256)
     const fileBuffer = fs.readFileSync(file.path);
     const hash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
 
-    // 2️Upload lên Google Drive
-    const driveResponse = await drive.files.create({
+    // Upload lên Google Drive
+    const driveResponse = await drive!.files.create({
       requestBody: { name: file.originalname, mimeType: file.mimetype },
       media: { mimeType: file.mimetype, body: fs.createReadStream(file.path) },
       fields: "id",
@@ -41,7 +41,10 @@ export class ContractService {
 
     await this.contractRepository.save(contract);
 
-    return contract;
+    return {
+      message: "Tạo hợp đồng thành công",
+      contract,
+    };
   }
   async getAllContracts() {
     return await this.contractRepository.find({

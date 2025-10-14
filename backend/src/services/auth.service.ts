@@ -1,9 +1,7 @@
+import { signToken } from "../utils/jwt";
 import { AppDataSource } from "../config/data_source";
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET!;
-const JWT_EXPIRES_IN = "1h";
 export class AuthService {
   private userRepo = AppDataSource.getRepository("User");
 
@@ -40,16 +38,12 @@ export class AuthService {
       private_key_encrypted: privateKeyEncrypted,
     });
     await this.userRepo.save(user);
+    const token = signToken({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    });
 
-    const token = jwt.sign(
-      {
-        sub: user.id,
-        email: user.email,
-        role: user.role,
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN, algorithm: "HS256" }
-    );
     return {
       token,
       user: {
@@ -68,18 +62,11 @@ export class AuthService {
     const match = await bcrypt.compare(password, user.passwordHash);
     if (!match) throw new Error("Sai mật khẩu");
 
-    const token = jwt.sign(
-      {
-        sub: user.id,
-        email: user.email,
-        role: user.role,
-      },
-      JWT_SECRET,
-      {
-        expiresIn: JWT_EXPIRES_IN,
-        algorithm: "HS256",
-      }
-    );
+    const token = signToken({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    });
     return {
       message: "Đăng nhập thành công",
       token,

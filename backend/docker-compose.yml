@@ -12,6 +12,8 @@ services:
       - db
     volumes:
       - .:/app
+      - ./credentials.json:/app/credentials.json # ✅ Mount riêng file credentials.json
+      - ./uploads:/app/uploads
     profiles:
       - dev
     restart: always

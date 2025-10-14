@@ -1,18 +1,20 @@
 import { google } from "googleapis";
-import * as path from "path";
-import * as fs from "fs";
+const path = require("path");
+const fs = require("fs");
 
 const KEYFILE_PATH = path.join(__dirname, "../../credentials.json");
-const credentials = JSON.parse(fs.readFileSync(KEYFILE_PATH, "utf8"));
+
+let credentials: any;
+if (fs.existsSync(KEYFILE_PATH)) {
+  credentials = JSON.parse(fs.readFileSync(KEYFILE_PATH, "utf8"));
+} else {
+  console.warn("Warning: credentials.json not found — Google Drive disabled.");
+}
 
 const SCOPES = ["https://www.googleapis.com/auth/drive.file"];
 
-const auth = new google.auth.GoogleAuth({
-  credentials,
-  scopes: SCOPES,
-});
+const auth = credentials
+  ? new google.auth.GoogleAuth({ credentials, scopes: SCOPES })
+  : undefined;
 
-export const drive = google.drive({
-  version: "v3",
-  auth,
-});
+export const drive = credentials ? google.drive({ version: "v3", auth }) : null;

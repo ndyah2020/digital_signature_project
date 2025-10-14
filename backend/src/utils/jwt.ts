@@ -1,7 +1,4 @@
-import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
-const JWT_EXPIRES_IN = "1h";
+const jwt = require("jsonwebtoken");
 
 export interface JwtPayload {
   sub: number;
@@ -10,9 +7,11 @@ export interface JwtPayload {
 }
 
 export function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  const secret = process.env.JWT_SECRET || "dev-secret";
+  return jwt.sign(payload, secret, { expiresIn: "1h" });
 }
 
 export function verifyToken(token: string): JwtPayload {
-  return jwt.verify(token, JWT_SECRET) as JwtPayload;
+  const secret = process.env.JWT_SECRET || "dev-secret";
+  return jwt.verify(token, secret) as JwtPayload;
 }

@@ -8,7 +8,8 @@ export class ContractController {
     try {
       const { title, description } = req.body;
       const user = (req as any).user;
-
+      console.log(">>> req.file:", req.file);
+      console.log(">>> req.body:", req.body);
       if (!req.file) {
         return res
           .status(400)

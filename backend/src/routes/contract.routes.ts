@@ -8,7 +8,7 @@ const upload = multer({ dest: "uploads/" });
 const controller = new ContractController();
 
 // POST /contracts → tạo hợp đồng mới
-router.post("/", authMiddleware, upload.single("file"), (req, res) =>
+router.post("/", upload.single("file"), authMiddleware, (req, res) =>
   controller.create(req, res)
 );
 

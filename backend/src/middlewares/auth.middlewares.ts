@@ -12,13 +12,11 @@ export const authMiddleware = (
   next: NextFunction
 ) => {
   const authHeader = req.headers.authorization;
-  
+
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res
-      .status(401)
-      .json({
-        message: "Thiếu token hoặc định dạng sai (phải là Bearer <token>)",
-      });
+    return res.status(401).json({
+      message: "Thiếu token hoặc định dạng sai (phải là Bearer <token>)",
+    });
   }
 
   const token = authHeader.split(" ")[1];
