@@ -1,5 +1,6 @@
+import cloudinary from "../config/cloudinary";
 import { AppDataSource } from "../config/data_source";
-import { drive } from "../config/googleDrive";
+
 const fs = require("fs");
 const crypto = require("crypto");
 import { ContractStatus } from "../entities/Contract";
@@ -15,15 +16,18 @@ export class ContractService {
     const fileBuffer = fs.readFileSync(file.path);
     const hash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
 
-    // Upload lên Google Drive
-    const driveResponse = await drive!.files.create({
-      requestBody: { name: file.originalname, mimeType: file.mimetype },
-      media: { mimeType: file.mimetype, body: fs.createReadStream(file.path) },
-      fields: "id",
+    // Upload lên Cloudinary
+    const result = await cloudinary.uploader.upload(file.path, {
+      resource_type: "raw", // Cho phép PDF hoặc file khác
+      type: "upload",
+      upload_preset: "unsigned_raw",
+      folder: "contracts", // Tạo folder trên Cloudinary
+      public_id: file.originalname.replace(/\.[^/.]+$/, ""), // Tên file (không kèm đuôi)
     });
-
-    const driveFileId = driveResponse.data.id;
-
+    const viewUrl = result.secure_url.replace(
+      "/upload/",
+      "/upload/fl_attachment:false/"
+    );
     // Xóa file tạm
     fs.unlinkSync(file.path);
 
@@ -31,7 +35,7 @@ export class ContractService {
     const contract = this.contractRepository.create({
       title,
       description,
-      drive_file_id: driveFileId,
+      file_url: viewUrl,
       file_type: file.mimetype,
       file_size: file.size,
       hash,
@@ -47,9 +51,7 @@ export class ContractService {
     };
   }
   async getAllContracts() {
-    return await this.contractRepository.find({
-      order: { created_at: "DESC" },
-    });
+    return await this.contractRepository.find();
   }
 
   // Cập nhật trạng thái hợp đồng

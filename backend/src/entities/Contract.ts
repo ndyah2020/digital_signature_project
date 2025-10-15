@@ -29,12 +29,11 @@ export class Contract {
   description: string | null;
 
   @Column({
-    name: "drive_file_id",
-    type: "varchar",
-    length: 50,
+    name: "file_url",
+    type: "text",
     nullable: true,
   })
-  driveFileId: string | null;
+  file_url: string | null;
 
   @Column({ name: "file_type", type: "varchar", length: 50, nullable: true })
   fileType: string | null;
