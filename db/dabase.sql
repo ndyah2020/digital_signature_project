@@ -17,7 +17,7 @@ CREATE TABLE contracts (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    drive_file_id VARCHAR(50),
+    file_url TEXT,
     file_type VARCHAR(20),
     file_size BIGINT,
     hash TEXT,  -- SHA-256 hash của nội dung hợp đồng
