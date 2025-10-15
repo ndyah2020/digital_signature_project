@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from '../components/ui/use-toast';
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { login, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   
-  const {
-    login,
-    isAuthenticated
-  } = useAuth();
-  const {
-    toast
-  } = useToast();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {

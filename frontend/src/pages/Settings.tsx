@@ -1,21 +1,15 @@
 import React, { useState, createElement } from 'react';
-import { useNavigate } from "react-router-dom";
 import { Save, Download, Key, Lock, User, LogOut } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from '../components/ui/use-toast';
 const Settings: React.FC = () => {
-  const navigate = useNavigate();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const {
-    user,
-    logout
-  } = useAuth();
-  const {
-    toast
-  } = useToast();
+  const { user, logout} = useAuth();
+  const { toast } = useToast();
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
@@ -28,16 +22,10 @@ const Settings: React.FC = () => {
     }
     setIsSubmitting(true);
     try {
-      // In a real app, this would be a real API call
-      // await api.post('/auth/change-password', {
-      //   currentPassword,
-      //   newPassword
-      // })
       toast({
         title: 'Thành công',
         description: 'Mật khẩu đã được thay đổi thành công.'
       });
-      // Reset form
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -52,6 +40,7 @@ const Settings: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
   const handleDownloadPublicKey = () => {
     if (!user?.publicKey) {
       toast({
@@ -65,6 +54,7 @@ const Settings: React.FC = () => {
     const blob = new Blob([user.publicKey], {
       type: 'text/plain'
     });
+
     // Create a temporary URL for the blob
     const url = URL.createObjectURL(blob);
     // Create a link element and trigger a download
@@ -82,17 +72,12 @@ const Settings: React.FC = () => {
     });
   };
   const handleLogout = () => {
-  toast({
-    title: 'Đã đăng xuất',
-    description: 'Bạn đã đăng xuất khỏi hệ thống.'
-  });
-
-  setTimeout(() => {
+    toast({
+      title: 'Đã đăng xuất',
+      description: 'Bạn đã đăng xuất khỏi hệ thống.'
+    });
     logout();
-    navigate('/login', { replace: true });
-  }, 2000);
-};
-
+  };
   return <div className="space-y-6">
     <h1 className="text-2xl font-bold text-gray-900">Cài đặt tài khoản</h1>
     {/* User Information */}

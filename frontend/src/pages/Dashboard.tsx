@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, XAxis, YAxis } from 'recharts';
-import { api } from '../utils/api';
 import { FileText, Users, CheckCircle, Clock, XCircle } from 'lucide-react';
 
 interface UserLog {

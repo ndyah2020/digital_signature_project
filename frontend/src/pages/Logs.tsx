@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ClipboardList, Download } from 'lucide-react';
 import DataTable from '../components/DataTable';
-import { api } from '../utils/api';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from '../components/ui/use-toast';
 import { formatDate } from '../utils/helpers';
 const Logs: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);

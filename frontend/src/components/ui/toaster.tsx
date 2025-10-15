@@ -1,6 +1,6 @@
-import React from 'react';
+
 import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from './toast';
-import { useToast } from '../../hooks/use-toast';
+import { useToast } from './use-toast'
 export function Toaster() {
   const {
     toasts

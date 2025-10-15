@@ -1,6 +1,8 @@
 export interface User {
     sub: string;
+    name: string;
     email: string;
+    publicKey?: string;
     role: string;
     iat: number;
     exp: number;
@@ -12,12 +14,6 @@ export interface LoginResponse {
     id: string;
     name: string;
   };
-}
-
-
-export interface AuthResponse {
-    user: LoginResponse;
-    exp?: number;
 }
 
 export interface LoginData {

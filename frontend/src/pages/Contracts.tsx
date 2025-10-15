@@ -3,13 +3,19 @@ import { Link } from 'react-router-dom';
 import { Plus, FileText, Download } from 'lucide-react';
 import DataTable from '../components/DataTable';
 import ContractUploader from '../components/ContractUploader';
-import { api } from '../utils/api';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from '../components/ui/use-toast';
 import { formatDate, formatContractStatus } from '../utils/helpers';
+import { ContractType } from '../type/contract.type';
+import { useMutation } from '../hooks/useMutation';
+import { createContract } from '../api/contract.api';
+
+
 const Contracts: React.FC = () => {
   const [contracts, setContracts] = useState<any[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
+
   const {
     toast
   } = useToast();
@@ -70,51 +76,46 @@ const Contracts: React.FC = () => {
     };
     fetchContracts();
   }, [toast]);
-  const handleContractUpload = async (contract: any) => {
-    try {
-      // In a real app, this would be a real API call
-      // const response = await api.post('/contracts', contract)
-      // Mocking response for demonstration
-      const newContract = {
-        id: `HD00${contracts.length + 1}`,
-        name: contract.name,
-        status: 'draft',
-        creator: 'Người dùng hiện tại',
-        createdAt: new Date().toISOString(),
-        hash: contract.hash,
-        fileType: contract.file.name.split('.').pop(),
-        fileSize: contract.file.size
-      };
-      setContracts([newContract, ...contracts]);
+
+  const { mutate } = useMutation(createContract, {
+    onSuccess: () => {
       toast({
-        title: 'Thành công',
-        description: 'Hợp đồng đã được tải lên thành công.'
+        title: "✅ Tạo hợp đồng thành công!",
+        description: "Hợp đồng của bạn đã được lưu trữ an toàn.",
       });
-      setIsUploaderOpen(false);
-    } catch (error) {
-      console.error('Error uploading contract:', error);
+    },
+    onError: (err) => {
       toast({
-        title: 'Lỗi',
-        description: 'Không thể tải lên hợp đồng. Vui lòng thử lại sau.',
-        variant: 'destructive'
+        title: "Lỗi tạo hợp đồng",
+        description: err.message || "Không thể tạo hợp đồng.",
+        variant: "destructive",
       });
-    }
+    },
+  });
+
+  const handleContractUpload = async (contract: ContractType) => {
+    await mutate({
+      name: contract.name,
+      description: contract.description,
+      file: contract.file,
+    });
   };
+  
   const columns = [{
     id: 'id',
     header: 'Mã hợp đồng',
     cell: (contract: any) => <div className="text-sm font-medium text-indigo-600 hover:text-indigo-900">
-          <Link to={`/contracts/${contract.id}`}>{contract.id}</Link>
-        </div>,
+      <Link to={`/contracts/${contract.id}`}>{contract.id}</Link>
+    </div>,
     sortable: true
   }, {
     id: 'name',
     header: 'Tên hợp đồng',
     cell: (contract: any) => <div className="text-sm text-gray-900">
-          <Link to={`/contracts/${contract.id}`} className="hover:underline">
-            {contract.name}
-          </Link>
-        </div>,
+      <Link to={`/contracts/${contract.id}`} className="hover:underline">
+        {contract.name}
+      </Link>
+    </div>,
     sortable: true
   }, {
     id: 'status',
@@ -122,8 +123,8 @@ const Contracts: React.FC = () => {
     cell: (contract: any) => {
       const status = formatContractStatus(contract.status);
       return <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${status.color}`}>
-            {status.text}
-          </span>;
+        {status.text}
+      </span>;
     },
     sortable: true
   }, {
@@ -135,42 +136,42 @@ const Contracts: React.FC = () => {
     id: 'createdAt',
     header: 'Ngày tạo',
     cell: (contract: any) => <div className="text-sm text-gray-500">
-          {formatDate(contract.createdAt)}
-        </div>,
+      {formatDate(contract.createdAt)}
+    </div>,
     sortable: true
   }, {
     id: 'actions',
     header: 'Hành động',
     cell: (contract: any) => <div className="flex space-x-2">
-          <Link to={`/contracts/${contract.id}`} className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100">
-            <FileText className="mr-1 h-3 w-3" />
-            Chi tiết
-          </Link>
-          <button className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100">
-            <Download className="mr-1 h-3 w-3" />
-            Tải xuống
-          </button>
-        </div>
+      <Link to={`/contracts/${contract.id}`} className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100">
+        <FileText className="mr-1 h-3 w-3" />
+        Chi tiết
+      </Link>
+      <button className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100">
+        <Download className="mr-1 h-3 w-3" />
+        Tải xuống
+      </button>
+    </div>
   }];
   if (loading) {
     return <div className="flex h-full items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
-      </div>;
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
+    </div>;
   }
   return <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Quản lý hợp đồng</h1>
-        <button onClick={() => setIsUploaderOpen(true)} className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-          <Plus className="mr-2 h-5 w-5" />
-          Tạo hợp đồng mới
-        </button>
+    <div className="mb-6 flex items-center justify-between">
+      <h1 className="text-2xl font-bold text-gray-900">Quản lý hợp đồng</h1>
+      <button onClick={() => setIsUploaderOpen(true)} className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+        <Plus className="mr-2 h-5 w-5" />
+        Tạo hợp đồng mới
+      </button>
+    </div>
+    <div className="rounded-lg bg-white shadow">
+      <div className="p-6">
+        <DataTable columns={columns} data={contracts} pagination={true} searchable={true} itemsPerPage={10} />
       </div>
-      <div className="rounded-lg bg-white shadow">
-        <div className="p-6">
-          <DataTable columns={columns} data={contracts} pagination={true} searchable={true} itemsPerPage={10} />
-        </div>
-      </div>
-      <ContractUploader isOpen={isUploaderOpen} onClose={() => setIsUploaderOpen(false)} onUpload={handleContractUpload} />
-    </div>;
+    </div>
+    <ContractUploader isOpen={isUploaderOpen} onClose={() => setIsUploaderOpen(false)} onUpload={handleContractUpload} />
+  </div>;
 };
 export default Contracts;
