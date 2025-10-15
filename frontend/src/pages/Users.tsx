@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, UserPlus } from 'lucide-react';
 import DataTable from '../components/DataTable';
 import { api } from '../utils/api';
-import { useToast } from '../components/ui/use-toast';
+import { useToast } from '../hooks/use-toast';
 import { formatDate } from '../utils/helpers';
 const Users: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);

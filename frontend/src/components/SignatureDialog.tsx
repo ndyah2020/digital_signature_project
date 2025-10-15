@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Key, Lock } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useToast } from './ui/use-toast';
+import { useToast } from '../hooks/use-toast';
 import { signDocument } from '../utils/crypto';
 interface SignatureDialogProps {
   isOpen: boolean;

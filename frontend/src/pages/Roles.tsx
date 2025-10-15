@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, Shield } from 'lucide-react';
 import DataTable from '../components/DataTable';
 import { api } from '../utils/api';
-import { useToast } from '../components/ui/use-toast';
+import { useToast } from '../hooks/use-toast';
 const Roles: React.FC = () => {
   const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

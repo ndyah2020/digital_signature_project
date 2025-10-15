@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, FileText, File } from 'lucide-react';
-import { useToast } from './ui/use-toast';
+import { useToast } from '../hooks/use-toast';
 import { calculateFileHash } from '../utils/crypto';
 import { formatFileSize } from '../utils/helpers';
 interface ContractUploaderProps {

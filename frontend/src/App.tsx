@@ -14,7 +14,8 @@ import Roles from './pages/Roles';
 import Logs from './pages/Logs';
 import Settings from './pages/Settings';
 export function App() {
-  return <AuthProvider>
+  return (
+    <AuthProvider>
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -40,5 +41,6 @@ export function App() {
         </Routes>
         <Toaster />
       </Router>
-    </AuthProvider>;
+    </AuthProvider>
+  )
 }

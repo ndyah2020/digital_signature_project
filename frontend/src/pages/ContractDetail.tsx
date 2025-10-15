@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Download, FileText, Clock, CheckCircle, XCircle, Edit, Trash2 } from 'lucide-react';
 import { api } from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
-import { useToast } from '../components/ui/use-toast';
+import { useToast } from '../hooks/use-toast';
 import { formatDate } from '../utils/helpers';
 import SignatureDialog from '../components/SignatureDialog';
 const ContractDetail: React.FC = () => {
