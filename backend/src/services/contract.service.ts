@@ -36,11 +36,11 @@ export class ContractService {
       title,
       description,
       file_url: viewUrl,
-      file_type: file.mimetype,
-      file_size: file.size,
+      fileType: file.mimetype,
+      fileSize: file.size,
       hash,
       status: ContractStatus.DRAFT,
-      created_by: createdBy,
+      createdBy: createdBy,
     });
 
     await this.contractRepository.save(contract);
