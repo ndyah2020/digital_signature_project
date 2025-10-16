@@ -1,13 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, FileText, File } from 'lucide-react';
-import { useToast } from './ui/use-toast';
+import { useToast } from '../components/ui/use-toast';
 import { calculateFileHash } from '../utils/crypto';
 import { formatFileSize } from '../utils/helpers';
+
 interface ContractUploaderProps {
   isOpen: boolean;
   onClose: () => void;
   onUpload: (contractData: any) => void;
 }
+
 const ContractUploader: React.FC<ContractUploaderProps> = ({
   isOpen,
   onClose,
@@ -20,9 +22,8 @@ const ContractUploader: React.FC<ContractUploaderProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const {
-    toast
-  } = useToast();
+  const {toast} = useToast();
+
   const handleFileChange = async (file: File) => {
     if (!file) return;
     const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -61,6 +62,7 @@ const ContractUploader: React.FC<ContractUploaderProps> = ({
       setIsProcessing(false);
     }
   };
+  
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -69,6 +71,7 @@ const ContractUploader: React.FC<ContractUploaderProps> = ({
     e.preventDefault();
     setIsDragging(false);
   };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -76,6 +79,7 @@ const ContractUploader: React.FC<ContractUploaderProps> = ({
       handleFileChange(e.dataTransfer.files[0]);
     }
   };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !name) {

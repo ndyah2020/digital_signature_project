@@ -16,42 +16,49 @@ const Register: React.FC = () => {
     toast
   } = useToast();
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !email || !password) {
-      toast({
-        title: 'Lỗi đăng ký',
-        description: 'Vui lòng nhập đầy đủ thông tin.',
-        variant: 'destructive'
-      });
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast({
-        title: 'Lỗi đăng ký',
-        description: 'Mật khẩu xác nhận không khớp.',
-        variant: 'destructive'
-      });
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      await register(email, name, password);
-      toast({
-        title: 'Đăng ký thành công',
-        description: 'Tài khoản của bạn đã được tạo thành công!'
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Đăng ký thất bại',
-        description: error.response?.data?.message || 'Có lỗi xảy ra khi đăng ký.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  e.preventDefault();
+
+  if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
+    toast({
+      title: 'Lỗi đăng ký',
+      description: 'Vui lòng nhập đầy đủ thông tin.',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    toast({
+      title: 'Lỗi đăng ký',
+      description: 'Mật khẩu xác nhận không khớp.',
+      variant: 'destructive',
+    });
+    return;
+  }
+  
+  setIsSubmitting(true);
+  try {
+    const res = await register(name, email, password);
+    console.log(res)
+    toast({
+      title: 'Đăng ký thành công',
+      description: 'Tài khoản của bạn đã được tạo thành công!',
+    });
+
+  } catch (error: any) {
+    toast({
+      title: 'Đăng ký thất bại',
+      description:
+        error?.response?.data?.message ||
+        'Có lỗi xảy ra khi đăng ký. Vui lòng thử lại sau.',
+      variant: 'destructive',
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/login" replace />;
   }
   return <div className="flex min-h-screen flex-col justify-center bg-gray-50 py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
