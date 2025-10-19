@@ -44,7 +44,16 @@ export class ContractController {
         .json({ message: "Lỗi khi lấy danh sách hợp đồng" });
     }
   }
-
+  // lấy hợp đồng theo id
+  async getById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const contract = await this.service.getContractById(parseInt(id));
+      return res.status(200).json(contract);
+    } catch (error: any) {
+      return res.status(400).json({ message: error.message });
+    }
+  }
   // [PATCH] /contracts/:id/status  → Cập nhật trạng thái (draft → pending/signed)
   async updateStatus(req: Request, res: Response) {
     try {

@@ -17,6 +17,10 @@ router.post("/:id/verify", authMiddleware, (req, res) =>
 router.get("/:contractId", authMiddleware, (req, res) =>
   controller.getSignaturesByContract(req, res)
 );
+// Lấy chữ ký theo ID
+router.get("/id/:signatureId", authMiddleware, (req, res) =>
+  controller.getSignatureById(req, res)
+);
 // Lấy tất cả chữ ký
 router.get("/", authMiddleware, (req, res) =>
   controller.getAllSignatures(req, res)

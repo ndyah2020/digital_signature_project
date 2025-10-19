@@ -14,7 +14,7 @@ router.post("/", upload.single("file"), authMiddleware, (req, res) =>
 
 // GET /contracts → lấy danh sách hợp đồng
 router.get("/", authMiddleware, (req, res) => controller.getAll(req, res));
-
+router.get("/:id", authMiddleware, (req, res) => controller.getById(req, res));
 // PATCH /contracts/:id/status → cập nhật trạng thái
 router.patch("/:id/status", authMiddleware, (req, res) =>
   controller.updateStatus(req, res)

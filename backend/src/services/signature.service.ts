@@ -102,6 +102,12 @@ export class SignatureService {
 
     return { isValid };
   }
+  async getSignatureById(signatureId: number) {
+    return await this.signatureRepository.findOne({
+      where: { id: signatureId },
+      relations: ["user", "contract"],
+    });
+  }
   async getSignaturesByContract(contractId: number) {
     return await this.signatureRepository.find({
       where: { contract: { id: contractId } },

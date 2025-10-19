@@ -59,7 +59,17 @@ export class SignatureController {
       return res.status(400).json({ message: error.message });
     }
   }
-
+  async getSignatureById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const signature = await this.signatureService.getSignatureById(
+        parseInt(id)
+      );
+      return res.json(signature);
+    } catch (error: any) {
+      return res.status(400).json({ message: error.message });
+    }
+  }
   // GET /signatures
   async getAllSignatures(req: Request, res: Response) {
     try {
