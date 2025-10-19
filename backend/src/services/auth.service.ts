@@ -1,9 +1,10 @@
 import { signToken } from "../utils/jwt";
 import { AppDataSource } from "../config/data_source";
+import { User, UserRole } from "../entities/User";
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 export class AuthService {
-  private userRepo = AppDataSource.getRepository("User");
+  private userRepo = AppDataSource.getRepository(User);
 
   async register(name: string, email: string, password: string) {
     const existing = await this.userRepo.findOne({ where: { email } });
@@ -33,9 +34,9 @@ export class AuthService {
       name,
       email,
       passwordHash,
-      public_key: publicKey,
-      role: "signer",
-      private_key_encrypted: privateKeyEncrypted,
+      publicKey: publicKey,
+      role: UserRole.SIGNER,
+      privateKeyEncrypted: privateKeyEncrypted,
     });
     await this.userRepo.save(user);
     const token = signToken({

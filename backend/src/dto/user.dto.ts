@@ -19,3 +19,7 @@ export const updateUserSchema = Joi.object({
   name: Joi.string().min(3).max(100).optional(),
   role: Joi.string().valid("admin", "signer", "viewer").optional(),
 });
+export type UpdateUserDTO = {
+  name?: string;
+  role?: "admin" | "signer" | "viewer";
+};
