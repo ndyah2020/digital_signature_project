@@ -24,6 +24,10 @@ export interface ContractDataType {
   updatedAt: string;
 }
 
+export interface ContractVerifyType {
+
+}
+
 export interface ContractUpdateType {
     id: number;
     title: string;

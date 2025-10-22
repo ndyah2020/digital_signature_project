@@ -1,56 +1,46 @@
 import { useState, useEffect } from 'react';
+import { api } from '../utils/api';
 
-async function sha256(buffer: ArrayBuffer): Promise<string> {
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
+export type VerificationStatus = 'idle' | 'pending' | 'verified' | 'mismatch' | 'error';
+export function useVerifyContractApi(url: string | null | undefined) {
   
-  const hexHash = hashArray
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-    
-  return hexHash;
-}
-
-
-export type VerificationStatus = 'pending' | 'verified' | 'mismatch' | 'error';
-
-export function useVerifyHash(fileUrl?: string, expectedHash?: string) {
-  const [status, setStatus] = useState<VerificationStatus>('pending');
+  const [status, setStatus] = useState<VerificationStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-
-    setStatus('pending');
-    setErrorMessage(null);
-
-    if (!fileUrl || !expectedHash) {
-      setStatus('pending'); 
-      return;
+    
+    if (!url || url.includes('undefined')) {
+      setStatus('idle'); 
+      setErrorMessage(null);
+      return; 
     }
-
-    const verify = async () => {
+    const verifyContract = async () => {
+      setStatus('pending');
+      setErrorMessage(null);
       try {
-        const response = await fetch(fileUrl);
-        if (!response.ok) {
-          throw new Error(`Lỗi tải file: ${response.statusText} (mã ${response.status})`);
-        }
-        const fileBuffer = await response.arrayBuffer();
-        
-        const calculatedHash = await sha256(fileBuffer);
+        console.log("Calling API with valid URL:", url);
+        const response = await api.get(url);
 
-        if (calculatedHash === expectedHash) {
-          setStatus('verified'); 
+        const apiStatus = response.data?.data?.status;
+        console.log(apiStatus)
+        
+        if (apiStatus === 'verified' || apiStatus === 'mismatch') {
+          setStatus(apiStatus);
         } else {
-          setStatus('mismatch');
+          setStatus('error');
+          setErrorMessage('Phản hồi từ máy chủ không hợp lệ.');
         }
       } catch (err: any) {
         setStatus('error');
-        setErrorMessage(err.message || 'Lỗi không xác định trong quá trình xác thực');
+        setErrorMessage(
+          err.response?.data?.message || err.message || 'Lỗi không xác định khi xác thực'
+        );
       }
     };
+    
+    verifyContract();
 
-    verify();
-  }, [fileUrl, expectedHash]); 
+  }, [url]); 
 
   return { status, errorMessage };
 }

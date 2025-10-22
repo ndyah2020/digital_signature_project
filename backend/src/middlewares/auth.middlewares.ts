@@ -23,7 +23,7 @@ export const authMiddleware = (
 
   try {
     const decoded = verifyToken(token);
-    req.user = decoded; // Lưu thông tin user vào request
+    req.user = decoded; 
     next();
   } catch (err) {
     return res

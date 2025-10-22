@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Download, FileText, Clock, CheckCircle, XCircle, Edit, Trash2, Eye } from 'lucide-react'; // Thêm icon Eye
+import { ArrowLeft, Download, FileText, Clock, CheckCircle, XCircle, Edit, Eye, Loader2 } from 'lucide-react'; // Thêm icon Eye
 import { useToast } from '../components/ui/use-toast';
 import { formatDate } from '../utils/helpers';
 import SignatureDialog from '../components/SignatureDialog';
 import { ContractDataType } from '../type/contract.type'
 import useFetch from '../hooks/useFetch'
-import { useVerifyHash, VerificationStatus } from '../hooks/useVerifyHash';
+import useDownload from '../hooks/useDowload';
+import { useVerifyContractApi, VerificationStatus } from '../hooks/useVerifyHash';
 
 const VerificationStatusBadge: React.FC<{ status: VerificationStatus; errorMessage: string | null }> = ({ status, errorMessage }) => {
   if (status === 'pending') {
@@ -43,18 +44,18 @@ const VerificationStatusBadge: React.FC<{ status: VerificationStatus; errorMessa
   }
   return null;
 };
+
 const ContractDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
-  
+
   const { toast } = useToast();
-  const { data: contract, loading, error, refetch } = useFetch<ContractDataType>(`/contracts/${id || '13'}`); 
-  
-  const { status: verificationStatus, errorMessage: verificationError } = useVerifyHash(
-    contract?.file_url,
-    contract?.hash
-  );
+  const { data: contract, loading, error, refetch } = useFetch<ContractDataType>(`/contracts/${id}`);
+  const { status: verificationStatus, errorMessage: verificationError } = useVerifyContractApi(`/contracts/verify_contracts/${contract?.id}`);
+
+  const { downloadFile, loading: loadingDown, error: errorDown } = useDownload(`/contracts/download/${contract?.id}`, contract?.title);
+
 
   useEffect(() => {
     if (error) {
@@ -64,39 +65,38 @@ const ContractDetail: React.FC = () => {
         variant: "destructive",
       });
     }
-  }, [error]);
+  }, [error, toast]);
 
   const handleSignContract = async (signature: string) => {
-    // Logic ký thật của bạn sẽ ở đây
     console.log("Đã ký (giả lập):", signature);
     toast({
-        title: "Đã ký (Giả lập)",
-        description: "Hợp đồng đã được ký thành công.",
-        variant: "default",
+      title: "Đã ký (Giả lập)",
+      description: "Hợp đồng đã được ký thành công.",
+      variant: "default",
     });
     setIsSignatureDialogOpen(false);
   };
 
   if (loading) {
-     return <div className="flex h-full items-center justify-center p-10">
-       <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
-     </div>;
+    return <div className="flex h-full items-center justify-center p-10">
+      <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
+    </div>;
   }
-  
-  if (!contract) {
-     return <div className="flex h-full flex-col items-center justify-center p-10">
-       <h1 className="text-2xl font-bold text-gray-900">
-         Không tìm thấy hợp đồng
-       </h1>
-       <p className="mt-2 text-gray-600">
-         Hợp đồng bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.
-       </p>
-       <Link to="/contracts" className="mt-4 text-indigo-600 hover:text-indigo-500">
-         Quay lại danh sách hợp đồng
-       </Link>
-     </div>;
+
+  if (error || !contract) {
+    return <div className="flex h-full flex-col items-center justify-center p-10">
+      <h1 className="text-2xl font-bold text-gray-900">
+        {error ? "Lỗi tải hợp đồng" : "Không tìm thấy hợp đồng"}
+      </h1>
+      <p className="mt-2 text-gray-600">
+        {error ? (error.message || "Đã xảy ra lỗi.") : "Hợp đồng bạn đang tìm kiếm không tồn tại hoặc đã bị xóa."}
+      </p>
+      <Link to="/contracts" className="mt-4 text-indigo-600 hover:text-indigo-500">
+        Quay lại danh sách hợp đồng
+      </Link>
+    </div>;
   }
-  
+
   const getStatusBadge = () => {
     switch (contract.status) {
       case 'draft':
@@ -134,9 +134,8 @@ const ContractDetail: React.FC = () => {
         return null;
     }
   };
-
   return (
-    <div className="p-4 md:p-8"> {/* Thêm padding cho toàn trang */}
+    <div className="p-4 md:p-8">
       <div className="mb-6">
         <Link to="/contracts" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
           <ArrowLeft className="mr-1 h-4 w-4" />
@@ -157,18 +156,24 @@ const ContractDetail: React.FC = () => {
           </p>
         </div>
         <div className="flex space-x-3">
-          <a
-            href={contract.file_url}
-            download 
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          <button
+            onClick={() => downloadFile()}
+            disabled={loadingDown}
+            className={`inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${loadingDown
+                ? "cursor-not-allowed opacity-70 text-gray-400"
+                : "text-gray-700 hover:bg-gray-50"
+              }`}
           >
-            <Download className="mr-2 h-4 w-4" />
-            Tải xuống
-          </a>
-          <button 
-            onClick={() => setIsSignatureDialogOpen(true)} 
+            {loadingDown ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin text-indigo-500" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            {loadingDown ? "Đang tải..." : "Tải xuống"}
+          </button>
+
+          <button
+            onClick={() => setIsSignatureDialogOpen(true)}
             className="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
           >
             <FileText className="mr-2 h-4 w-4" />
@@ -208,15 +213,13 @@ const ContractDetail: React.FC = () => {
                   </p>
                 </div>
               )}
-
-              {showViewer && (
+              {showViewer && contract?.file_url && (
                 <iframe
-                  src={contract.file_url}
-                  width="100%"
-                  height="800px"
+                  src={`https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(contract.file_url)}`}
                   title={`Nội dung file ${contract.title}`}
-                  className="h-[800px] w-full"
-                  style={{ border: '1px solid #ccc' }} 
+                  className="w-full h-[800px]"
+                  style={{ border: "none" }}
+                  allow="fullscreen"
                 >
                   Trình duyệt của bạn không hỗ trợ iframe.
                   <a href={contract.file_url} target="_blank" rel="noopener noreferrer">
@@ -277,11 +280,11 @@ const ContractDetail: React.FC = () => {
                     Loại file
                   </dt>
                   <dd className="mt-1 flex items-center text-sm text-gray-900">
-                    {contract.fileType.includes('pdf') ?
+                    {contract.fileType?.includes('pdf') ?
                       <FileText className="mr-1 h-4 w-4 text-red-500" /> :
                       <FileText className="mr-1 h-4 w-4 text-blue-500" />
                     }
-                    {contract.fileType.toUpperCase()}
+                    {contract.fileType?.toUpperCase()}
                   </dd>
                 </div>
                 <div>
@@ -309,23 +312,40 @@ const ContractDetail: React.FC = () => {
                 Các bên tham gia
               </h3>
             </div>
-            {/* <div className="border-t border-gray-200">
+            <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
+              <p className="text-sm text-gray-500">Thông tin các bên tham gia sẽ được hiển thị ở đây.</p>
+              {/* <div className="border-t border-gray-200">
               // ... Code của bạn cho 'Các bên tham gia' ...
             </div> 
             */}
+            </div>
           </div>
         </div>
+
         {/* Signatures (Giữ nguyên) */}
-        {/* <div className="col-span-1">
-          // ... Code của bạn cho 'Chữ ký số' ...
-        </div> 
-        */}
+        <div className="col-span-1 space-y-6">
+          <div className="overflow-hidden rounded-lg bg-white shadow">
+            <div className="px-4 py-5 sm:px-6">
+              <h3 className="text-lg font-medium leading-6 text-gray-900">
+                Lịch sử chữ ký
+              </h3>
+            </div>
+            <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
+              <p className="text-sm text-gray-500">Lịch sử ký của các bên sẽ được hiển thị ở đây.</p>
+              {/* <div className="col-span-1">
+              // ... Code của bạn cho 'Chữ ký số' ...
+            </div> 
+            */}
+            </div>
+          </div>
+        </div>
+
       </div>
-      <SignatureDialog 
-        isOpen={isSignatureDialogOpen} 
-        onClose={() => setIsSignatureDialogOpen(false)} 
-        onSign={handleSignContract} 
-        contractHash={contract.hash} 
+      <SignatureDialog
+        isOpen={isSignatureDialogOpen}
+        onClose={() => setIsSignatureDialogOpen(false)}
+        onSign={handleSignContract}
+        contractHash={contract.hash}
       />
     </div>
   );

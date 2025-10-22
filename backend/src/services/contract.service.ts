@@ -1,3 +1,4 @@
+import axios from "axios";
 import cloudinary from "../config/cloudinary";
 import { AppDataSource } from "../config/data_source";
 import { Contract, ContractStatus } from "../entities/Contract";
@@ -8,30 +9,34 @@ const fs = require("fs");
 const crypto = require("crypto");
 
 export class ContractService {
+
+  private recipientRepository = AppDataSource.getRepository(ContractRecipient);
+  private userRepository = AppDataSource.getRepository(User);
   private contractRepository = AppDataSource.getRepository(Contract);
   private auditLogService = new AuditLogService();
+
   async createContract(
     file: import("multer").File,
     title: string,
     description: string,
-    createdBy: number
+    createdBy: number,
   ) {
     const fileBuffer = fs.readFileSync(file.path);
     const hash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
 
     const result = await cloudinary.uploader.upload(file.path, {
-      resource_type: "image", 
+      resource_type: "raw",
       type: "upload",
       upload_preset: "unsigned_raw",
-      folder: "contracts", 
-      public_id: file.originalname.replace(/\.[^/.]+$/, ""), 
+      folder: "contracts",
+      public_id: file.originalname.replace(/\.[^/.]+$/, ""),
     });
 
     const viewUrl = result.secure_url.replace(
-      "/image/upload/", 
-      "/image/upload/fl_attachment:false/"
+      "/upload/",
+      "/upload/fl_attachment:true/"
     );
-    
+
     fs.unlinkSync(file.path);
 
     const contract = this.contractRepository.create({
@@ -70,6 +75,78 @@ export class ContractService {
       },
     });
   }
+
+  async verifyContractIntegrity(id: number): Promise<{ status: string, message: string }> {
+    try {
+      const contract = await this.contractRepository.findOne({ where: { id } });
+      if (!contract) {
+        throw new Error("Không tìm thấy hợp đồng");
+      }
+
+      const storedHash = contract.hash;
+      const fileUrl = contract.file_url;
+
+      if (!fileUrl) {
+        throw new Error("Không tìm thấy file URL của hợp đồng này.");
+      }
+
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(`Không thể tải file từ Cloudinary: ${response.statusText}`);
+      }
+      const fileArrayBuffer = await response.arrayBuffer();
+      const fileBuffer = Buffer.from(fileArrayBuffer);
+      const calculatedHash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
+
+      if (calculatedHash === storedHash) {
+        return { status: "verified", message: "File toàn vẹn." };
+      } else {
+        return { status: "mismatch", message: "Cảnh báo: File không khớp với bản gốc!" };
+      }
+
+    } catch (error: any) {
+      console.error("Lỗi khi xác thực hash:", error);
+      return { status: "error", message: error.message || "Lỗi không xác định" };
+    }
+  }
+
+  async downloadContractFile(id: number) {
+    const contract = await this.contractRepository.findOne({ where: { id } });
+    if (!contract || !contract.file_url) {
+      throw new Error("Không tìm thấy file hợp đồng.");
+    }
+
+    // 🟢 Lấy file binary trực tiếp từ Cloudinary
+    const response = await axios.get(contract.file_url, {
+      responseType: "arraybuffer",
+    });
+
+    // 🟢 Xác định loại MIME chính xác
+    const mimeType =
+      response.headers["content-type"] ||
+      contract.fileType ||
+      "application/octet-stream";
+
+    // 🟢 Tạo tên file an toàn
+    const ext =
+      mimeType === "application/pdf"
+        ? ".pdf"
+        : mimeType.includes("word")
+          ? ".docx"
+          : "";
+    const fileName = contract.title
+      ? `${contract.title}${ext}`
+      : `contract${ext}`;
+
+    // 🟢 Trả về file data
+    return {
+      fileName,
+      mimeType,
+      fileBuffer: Buffer.from(response.data),
+    };
+  }
+
+
   async getContractById(id: number) {
     const contract = await this.contractRepository.findOne({
       where: { id },
@@ -81,7 +158,10 @@ export class ContractService {
         file_url: true,
         hash: true,
         status: true,
+        fileSize: true,
+        fileType: true,
         createdBy: {
+          name: true,
           email: true,
         },
         signatures: {
@@ -237,3 +317,4 @@ export class ContractService {
     return { success: true };
   }
 }
+

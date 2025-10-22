@@ -54,6 +54,51 @@ export class ContractController {
       return res.status(400).json({ message: error.message });
     }
   }
+
+  async verifyContracts(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({ message: "Thiếu ID của hợp đồng" });
+      }
+      const result = await this.service.verifyContractIntegrity(parseInt(id));
+      if (result.status === 'error') {
+
+        return res.status(400).json({ message: result.message });
+      }
+
+      return res.status(200).json({
+        message: result.message,
+        data: { status: result.status }
+      });
+
+    } catch (error: any) {
+      return res.status(400).json({ message: error.message });
+    }
+  }
+
+  async downloadContract(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { fileName, mimeType, fileBuffer } =
+        await this.service.downloadContractFile(parseInt(id));
+
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${encodeURIComponent(fileName)}"`
+      );
+      res.setHeader("Content-Length", fileBuffer.length);
+
+      res.end(fileBuffer);
+    } catch (error: any) {
+      console.error("Lỗi khi tải file:", error);
+      res
+        .status(500)
+        .json({ message: error.message || "Lỗi khi tải file xuống" });
+    }
+  }
+
   // [PATCH] /contracts/:id/status  → Cập nhật trạng thái (draft → pending/signed)
   async updateStatus(req: Request, res: Response) {
     try {

@@ -16,17 +16,27 @@ router.post("/", upload.single("file"), authMiddleware, (req, res) =>
 
 // GET /contracts → lấy danh sách hợp đồng
 router.get("/", authMiddleware, (req, res) => controller.getAll(req, res));
+
 router.get("/:id", authMiddleware, (req, res) => controller.getById(req, res));
 // PATCH /contracts/:id/status → cập nhật trạng thái
+// ✅ Router (fix cú pháp)
+router.get( "/verify_contracts/:id", authMiddleware,(req, res) => controller.verifyContracts(req, res));
+
+router.get("/download/:id", authMiddleware, (req, res) =>
+  controller.downloadContract(req, res)
+);
+
 router.patch("/:id/status", authMiddleware, (req, res) =>
   controller.updateStatus(req, res)
 );
+
 router.post(
   "/:id/assign",
   authMiddleware,
   requireRole(UserRole.ADMIN, UserRole.SIGNER),
   (req, res) => controller.assign(req, res)
 );
+
 // update (PATCH)
 router.patch(
   "/:id",
@@ -34,6 +44,7 @@ router.patch(
   requireRole(UserRole.ADMIN, UserRole.SIGNER),
   (req, res) => controller.update(req, res)
 );
+
 // delete
 router.delete("/:id", authMiddleware, requireRole(UserRole.ADMIN), (req, res) =>
   controller.delete(req, res)
