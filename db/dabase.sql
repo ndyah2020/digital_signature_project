@@ -26,7 +26,16 @@ CREATE TABLE contracts (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
+-- tạo bảng nối contracts <-> users
+CREATE TABLE contract_recipients (
+  contract_id INT NOT NULL,
+  user_id INT NOT NULL,
+  sign_status VARCHAR(20) DEFAULT 'pending' CHECK (sign_status IN ('pending', 'signed', 'failed')),
+  signed_at TIMESTAMP NULL,
+  PRIMARY KEY (contract_id, user_id),
+  CONSTRAINT fk_cr_contract FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_cr_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
 -- chữ ký số của người dùng trên hợp đồng
 CREATE TABLE signatures (
     id SERIAL PRIMARY KEY,
@@ -82,3 +91,5 @@ ON UPDATE CASCADE;
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_contracts_status ON contracts(status);
 CREATE INDEX idx_signatures_contract_user ON signatures(contract_id, user_id);
+CREATE INDEX idx_contract_recipients_contract ON contract_recipients(contract_id);
+CREATE INDEX idx_contract_recipients_user ON contract_recipients(user_id);

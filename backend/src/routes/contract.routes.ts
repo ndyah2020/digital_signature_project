@@ -2,6 +2,8 @@ import { Router } from "express";
 import * as multer from "multer";
 import { ContractController } from "../controllers/contract.controller";
 import { authMiddleware } from "../middlewares/auth.middlewares";
+import { UserRole } from "../entities/User";
+import { requireRole } from "../middlewares/requireRole";
 
 const router = Router();
 const upload = multer({ dest: "uploads/" });
@@ -18,6 +20,23 @@ router.get("/:id", authMiddleware, (req, res) => controller.getById(req, res));
 // PATCH /contracts/:id/status → cập nhật trạng thái
 router.patch("/:id/status", authMiddleware, (req, res) =>
   controller.updateStatus(req, res)
+);
+router.post(
+  "/:id/assign",
+  authMiddleware,
+  requireRole(UserRole.ADMIN, UserRole.SIGNER),
+  (req, res) => controller.assign(req, res)
+);
+// update (PATCH)
+router.patch(
+  "/:id",
+  authMiddleware,
+  requireRole(UserRole.ADMIN, UserRole.SIGNER),
+  (req, res) => controller.update(req, res)
+);
+// delete
+router.delete("/:id", authMiddleware, requireRole(UserRole.ADMIN), (req, res) =>
+  controller.delete(req, res)
 );
 
 export default router;

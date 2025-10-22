@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { ContractService } from "../services/contract.service";
-
+import { UserRole } from "../entities/User";
 export class ContractController {
   private service = new ContractService();
 
@@ -70,6 +70,66 @@ export class ContractController {
         message: "Cập nhật trạng thái hợp đồng thành công",
         data: updated,
       });
+    } catch (error: any) {
+      return res.status(400).json({ message: error.message });
+    }
+  }
+  // POST /contracts/:id/assign  → gán contract cho 1 list userIds
+  async assign(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { recipientIds } = req.body;
+      const user = (req as any).user;
+      if (!Array.isArray(recipientIds) || recipientIds.length === 0) {
+        return res
+          .status(400)
+          .json({ message: "recipientIds phải là mảng id" });
+      }
+
+      const updated = await this.service.assignContractToUser(
+        parseInt(id),
+        user.sub,
+        recipientIds
+      );
+      return res.status(200).json({ message: "Gán thành công", data: updated });
+    } catch (error: any) {
+      return res.status(400).json({ message: error.message });
+    }
+  }
+
+  // PATCH /contracts/:id -> cập nhật hợp đồng
+  async update(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const user = (req as any).user;
+      const updateData = req.body;
+      const updated = await this.service.updateContractMetadata(
+        parseInt(id),
+        updateData,
+        user.sub,
+        user.role
+      );
+      return res
+        .status(200)
+        .json({ message: "Cập nhật thành công", data: updated });
+    } catch (error: any) {
+      return res.status(400).json({ message: error.message });
+    }
+  }
+
+  // DELETE /contracts/:id
+  async delete(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const force = req.query.force === "true";
+      const user = (req as any).user;
+      const result = await this.service.deleteContract(
+        parseInt(id),
+        user.sub,
+        user.role,
+        force
+      );
+      return res.status(200).json({ message: "Xóa thành công", data: result });
     } catch (error: any) {
       return res.status(400).json({ message: error.message });
     }
