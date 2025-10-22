@@ -8,7 +8,7 @@ import { User } from "../entities/User";
 import { Contract } from "../entities/Contract";
 import { Signature } from "../entities/Signature";
 import { AuditLog } from "../entities/AuditLog";
-
+import { ContractRecipient } from "../entities/ContractRecipient";
 // Khởi tạo DataSource cho PostgreSQL
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -19,5 +19,5 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || "signature_db",
   synchronize: true,
   logging: false,
-  entities: [User, Contract, Signature, AuditLog],
+  entities: [User, Contract, Signature, AuditLog, ContractRecipient],
 });

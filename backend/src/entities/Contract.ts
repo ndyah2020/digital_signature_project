@@ -6,9 +6,12 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToMany,
+  ManyToMany,
+  JoinTable,
 } from "typeorm";
 import { User } from "./User";
 import { Signature } from "./Signature";
+import { ContractRecipient } from "./ContractRecipient";
 
 export enum ContractStatus {
   DRAFT = "draft",
@@ -63,4 +66,7 @@ export class Contract {
   // Relations
   @OneToMany(() => Signature, (signature) => signature.contract)
   signatures: Signature[];
+
+  @OneToMany(() => ContractRecipient, (cr) => cr.contract)
+  recipientLinks: ContractRecipient[];
 }

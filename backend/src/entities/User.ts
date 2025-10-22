@@ -5,10 +5,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  ManyToMany,
 } from "typeorm";
 import { Contract } from "./Contract";
 import { Signature } from "./Signature";
 import { AuditLog } from "./AuditLog";
+import { ContractRecipient } from "./ContractRecipient";
 
 export enum UserRole {
   ADMIN = "admin",
@@ -58,4 +60,7 @@ export class User {
 
   @OneToMany(() => AuditLog, (log) => log.user)
   logs: AuditLog[];
+
+  @OneToMany(() => ContractRecipient, (cr) => cr.user)
+  recipientLinks: ContractRecipient[];
 }
