@@ -10,37 +10,34 @@ export class ContractService {
   private contractRepository = AppDataSource.getRepository(Contract);
   private auditLogService = new AuditLogService();
 
-  // create contract
   async createContract(
     file: import("multer").File,
     title: string,
     description: string,
     createdBy: number
   ) {
-    // Băm nội dung file (SHA-256)
     const fileBuffer = fs.readFileSync(file.path);
     const hash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
 
-    // Upload lên Cloudinary
     const result = await cloudinary.uploader.upload(file.path, {
-      resource_type: "raw", // Cho phép PDF hoặc file khác
+      resource_type: "image", 
       type: "upload",
       upload_preset: "unsigned_raw",
-      folder: "contracts", // Tạo folder trên Cloudinary
-      public_id: file.originalname.replace(/\.[^/.]+$/, ""), // Tên file (không kèm đuôi)
+      folder: "contracts", 
+      public_id: file.originalname.replace(/\.[^/.]+$/, ""), 
     });
+
     const viewUrl = result.secure_url.replace(
-      "/upload/",
-      "/upload/fl_attachment:false/"
+      "/image/upload/", 
+      "/image/upload/fl_attachment:false/"
     );
-    // Xóa file tạm
+    
     fs.unlinkSync(file.path);
 
-    // Lưu metadata vào DB
     const contract = this.contractRepository.create({
       title,
       description,
-      file_url: viewUrl,
+      file_url: viewUrl, // Lưu URL đã sửa đúng
       fileType: file.mimetype,
       fileSize: file.size,
       hash,

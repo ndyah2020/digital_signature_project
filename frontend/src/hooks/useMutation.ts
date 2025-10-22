@@ -17,6 +17,7 @@ export function useMutation<TData = unknown, TVariables = unknown>(
 
   const mutate = useCallback(
     async (variables: TVariables): Promise<TData> => {
+      if (isLoading) return Promise.reject(new Error("Đang xử lý, vui lòng chờ..."));
       setIsLoading(true);
       setError(null);
       try {

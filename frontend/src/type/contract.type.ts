@@ -1,20 +1,27 @@
+import { SignatureType } from "./signature";
+
 export interface ContractType {
     name: string;
     description: string;
     file: File;
 }
-
 export interface ContractDataType {
+  id: number;
+  title: string;
+  description: string;
+  file_url: string;
+  fileType: string;
+  fileSize: string; 
+  hash: string;
+  status: string;
+  createdBy: {
     id: number,
-    title: string,
-    description: string,
-    file_url: string,
-    fileType: string,
-    fileSize: string,
-    hash: string,
-    status: string,
-    createdAt: Date,
-    updatedAt: Date
+    name: string,
+    emai: string,
+  };
+  signatures: SignatureType[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ContractUpdateType {

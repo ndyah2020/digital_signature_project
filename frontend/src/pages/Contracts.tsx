@@ -16,13 +16,16 @@ const Contracts: React.FC = () => {
   const { data: contracts, loading, error, refetch } = useFetch<ContractDataType[]>("/contracts");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractDataType | null>(null);
+
   // Tạo hợp đồng
-  const { mutate } = useMutation(createContract, {
+  const { mutate, isLoading: isCreating } = useMutation(createContract, {
     onSuccess: () => {
       toast({
         title: "✅ Tạo hợp đồng thành công!",
         description: "Hợp đồng của bạn đã được lưu trữ an toàn.",
       });
+      setIsUploaderOpen(false)
+      refetch();
     },
     onError: (err) => {
       toast({
@@ -42,7 +45,7 @@ const Contracts: React.FC = () => {
   };
 
   // cập nhật hợp đồng
-  const { mutate: mutateUpdate } = useMutation(updateContract, {
+  const { mutate: mutateUpdate, isLoading: isUpdating } = useMutation(updateContract, {
     onSuccess: () => {
       toast({
         title: "✅ Cập nhật hợp đồng thành công!",
@@ -70,6 +73,7 @@ const Contracts: React.FC = () => {
     });
   };
 
+  //Cap nhat trang thai
   const {
     mutate: mutateStatus,
     isLoading: isUpdatingStatus,
@@ -175,17 +179,23 @@ const Contracts: React.FC = () => {
   return <div>
     <div className="mb-6 flex items-center justify-between">
       <h1 className="text-2xl font-bold text-gray-900">Quản lý hợp đồng</h1>
-      <button onClick={() => setIsUploaderOpen(true)} className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+      <button
+        onClick={() => setIsUploaderOpen(true)}
+        disabled={isCreating}
+        className={`inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-white shadow-sm
+      ${isCreating ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
+      >
         <Plus className="mr-2 h-5 w-5" />
-        Tạo hợp đồng mới
+        {isCreating ? "Đang tạo..." : "Tạo hợp đồng mới"}
       </button>
+
     </div>
     <div className="rounded-lg bg-white shadow">
       <div className="p-6">
         <DataTable columns={columns} data={contracts || []} pagination={true} searchable={true} itemsPerPage={10} />
       </div>
     </div>
-    <ContractUploader isOpen={isUploaderOpen} onClose={() => setIsUploaderOpen(false)} onUpload={handleContractUpload} />
+    <ContractUploader isOpen={isUploaderOpen} onClose={() => setIsUploaderOpen(false)} onUpload={handleContractUpload} isCreating={isCreating}/>
     <ContractEditor isOpen={isEditOpen} contract={selectedContract} onClose={() => setIsEditOpen(false)} onSave={handleSaveEdit} />
   </div>;
 };
