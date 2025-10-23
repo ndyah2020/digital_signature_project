@@ -4,97 +4,48 @@ import { Plus, FileText, Download } from 'lucide-react';
 import DataTable from '../components/DataTable';
 import ContractUploader from '../components/ContractUploader';
 import ContractEditor from "../components/ContractEditor";
-import { useToast } from '../components/ui/use-toast';
 import { formatDate, formatContractStatus } from '../utils/helpers';
-import { useMutation } from '../hooks/useMutation';
-import { createContract, updateContract, updateContractStatus } from '../api/contract.api';
+
+import {
+  useCreateContract,
+  useUpdateContract,
+  useUpdateContractStatus
+} from '../api/contract.api'; 
+
+
 import { ContractDataType, ContractUpdateType, ContractType } from '../type/contract.type'
 import useFetch from '../hooks/useFetch';
+
 const Contracts: React.FC = () => {
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-  const { toast } = useToast();
   const { data: contracts, loading, error, refetch } = useFetch<ContractDataType[]>("/contracts");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractDataType | null>(null);
 
-  // Tạo hợp đồng
-  const { mutate, isLoading: isCreating } = useMutation(createContract, {
-    onSuccess: () => {
-      toast({
-        title: "✅ Tạo hợp đồng thành công!",
-        description: "Hợp đồng của bạn đã được lưu trữ an toàn.",
-      });
-      setIsUploaderOpen(false)
-      refetch();
-    },
-    onError: (err) => {
-      toast({
-        title: "Lỗi tạo hợp đồng",
-        description: err.message || "Không thể tạo hợp đồng.",
-        variant: "destructive",
-      });
-    },
-  });
+
+  const { mutate: createMutate, isLoading: isCreating } = useCreateContract();
+  const { mutate: updateMutate, isLoading: isUpdating } = useUpdateContract();
+  const { mutate: mutateStatus, isLoading: isUpdatingStatus } = useUpdateContractStatus();
 
   const handleContractUpload = async (contract: ContractType) => {
-    await mutate({
-      name: contract.name,
-      description: contract.description,
-      file: contract.file,
-    });
+    try {
+      await createMutate(contract);
+      refetch(); 
+      setIsUploaderOpen(false); 
+    } catch (err) {
+      console.error("Lỗi tạo hợp đồng (từ component):", err);
+    }
   };
-
-  // cập nhật hợp đồng
-  const { mutate: mutateUpdate, isLoading: isUpdating } = useMutation(updateContract, {
-    onSuccess: () => {
-      toast({
-        title: "✅ Cập nhật hợp đồng thành công!",
-        description: "Thông tin hợp đồng đã được cập nhật.",
-      });
-      refetch();
-      setIsEditOpen(false);
-    },
-    onError: (err) => {
-      toast({
-        title: "Lỗi cập nhật hợp đồng",
-        description: err.message || "Không thể cập nhật hợp đồng.",
-        variant: "destructive",
-      });
-    },
-  });
-
 
   const handleSaveEdit = async (contract: ContractUpdateType) => {
-    await mutateUpdate({
-      id: contract.id,
-      title: contract.title,
-      description: contract.description,
-      file: contract.file,
-    });
-  };
-
-  //Cap nhat trang thai
-  const {
-    mutate: mutateStatus,
-    isLoading: isUpdatingStatus,
-  } = useMutation(updateContractStatus, {
-    onSuccess: (data) => {
-      toast({
-        title: "✅ Cập nhật trạng thái thành công!",
-        description: `Hợp đồng đã chuyển sang trạng thái "${data.status}".`,
-      });
+    try {
+      await updateMutate(contract);
       refetch();
-    },
-    onError: (err) => {
-      toast({
-        title: "Lỗi cập nhật trạng thái",
-        description: err.message || "Không thể thay đổi trạng thái hợp đồng.",
-        variant: "destructive",
-      });
-    },
-  });
-
-
+      setIsEditOpen(false); 
+    } catch (err) {
+      console.error("Lỗi cập nhật hợp đồng (từ component):", err);
+    }
+  };
 
   const columns = [{
     id: 'id',
@@ -118,13 +69,18 @@ const Contracts: React.FC = () => {
     cell: (contract: ContractDataType) => (
       <select
         value={contract.status}
-        onChange={(e) =>
-          mutateStatus({
-            id: contract.id,
-            status: e.target.value as "draft" | "pending" | "signed" | "cancelled",
-          })
-        }
-        disabled={isUpdatingStatus}
+        onChange={async (e) => { 
+          try {
+            await mutateStatus({ 
+              id: contract.id,
+              status: e.target.value as "draft" | "pending" | "signed" | "cancelled",
+            });
+            refetch(); 
+          } catch (err) {
+            console.error(err);        
+          }
+        }}
+        disabled={isUpdatingStatus} 
         className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
       >
         <option value="draft">Bản nháp</option>
@@ -137,10 +93,10 @@ const Contracts: React.FC = () => {
   },
 
   // {
-  //   id: 'creator',
-  //   header: 'Người tạo',
-  //   cell: (contract: ContractDataType) => <div className="text-sm text-gray-500">{contract.creator}</div>,
-  //   sortable: true
+  //   id: 'creator',
+  //   header: 'Người tạo',
+  //   cell: (contract: ContractDataType) => <div className="text-sm text-gray-500">{contract.creator}</div>,
+  //   sortable: true
   // },
   {
     id: 'createdAt',
@@ -181,9 +137,9 @@ const Contracts: React.FC = () => {
       <h1 className="text-2xl font-bold text-gray-900">Quản lý hợp đồng</h1>
       <button
         onClick={() => setIsUploaderOpen(true)}
-        disabled={isCreating}
+        disabled={isCreating} // Biến này giờ đã được định nghĩa
         className={`inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-white shadow-sm
-      ${isCreating ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
+        ${isCreating ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
       >
         <Plus className="mr-2 h-5 w-5" />
         {isCreating ? "Đang tạo..." : "Tạo hợp đồng mới"}
@@ -195,8 +151,18 @@ const Contracts: React.FC = () => {
         <DataTable columns={columns} data={contracts || []} pagination={true} searchable={true} itemsPerPage={10} />
       </div>
     </div>
-    <ContractUploader isOpen={isUploaderOpen} onClose={() => setIsUploaderOpen(false)} onUpload={handleContractUpload} isCreating={isCreating}/>
-    <ContractEditor isOpen={isEditOpen} contract={selectedContract} onClose={() => setIsEditOpen(false)} onSave={handleSaveEdit} />
+    <ContractUploader
+      isOpen={isUploaderOpen}
+      onClose={() => setIsUploaderOpen(false)}
+      onUpload={handleContractUpload}
+      isCreating={isCreating}
+    />
+    <ContractEditor
+      isOpen={isEditOpen}
+      contract={selectedContract}
+      onClose={() => setIsEditOpen(false)}
+      onSave={handleSaveEdit}
+    />
   </div>;
 };
 export default Contracts;

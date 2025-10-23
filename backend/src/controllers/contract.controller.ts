@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { ContractService } from "../services/contract.service";
 import { UserRole } from "../entities/User";
+
 export class ContractController {
   private service = new ContractService();
 
@@ -76,6 +77,23 @@ export class ContractController {
       return res.status(400).json({ message: error.message });
     }
   }
+
+  async view(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user.sub;
+      console.log(userId)
+      const id = parseInt(req.params.id);
+
+      const stream = await this.service.viewContract(id, userId, res);
+      return stream; // stream file PDF trực tiếp
+    } catch (error: any) {
+      console.error("Lỗi khi xem hợp đồng:", error);
+      return res.status(500).json({
+        message: error.message || "Lỗi khi xem hợp đồng",
+      });
+    }
+  }
+
 
   // [PATCH] /contracts/:id/status  → Cập nhật trạng thái (draft → pending/signed)
   async updateStatus(req: Request, res: Response) {

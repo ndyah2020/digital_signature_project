@@ -20,16 +20,17 @@ router.get("/", authMiddleware, (req, res) => controller.getAll(req, res));
 router.get("/:id", authMiddleware, (req, res) => controller.getById(req, res));
 // PATCH /contracts/:id/status → cập nhật trạng thái
 // ✅ Router (fix cú pháp)
-router.get( "/verify_contracts/:id", authMiddleware,(req, res) => controller.verifyContracts(req, res));
+router.get("/verify_contracts/:id", authMiddleware,(req, res) => controller.verifyContracts(req, res));
 
-router.get("/download/:id", authMiddleware, (req, res) =>
-  controller.downloadContract(req, res)
+router.get("/view/:id", authMiddleware, (req, res) =>
+  controller.view(req, res)
 );
+
 
 router.patch("/:id/status", authMiddleware, (req, res) =>
   controller.updateStatus(req, res)
 );
-
+ 
 router.post(
   "/:id/assign",
   authMiddleware,

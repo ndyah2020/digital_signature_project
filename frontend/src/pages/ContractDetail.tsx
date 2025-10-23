@@ -7,6 +7,8 @@ import SignatureDialog from '../components/SignatureDialog';
 import { ContractDataType } from '../type/contract.type'
 import useFetch from '../hooks/useFetch'
 import { useVerifyContractApi, VerificationStatus } from '../hooks/useVerifyHash';
+import { useViewContract } from '../api/contract.api';
+
 
 const VerificationStatusBadge: React.FC<{ status: VerificationStatus; errorMessage: string | null }> = ({ status, errorMessage }) => {
   if (status === 'pending') {
@@ -48,10 +50,12 @@ const ContractDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
-    
   const { toast } = useToast();
   const { data: contract, loading, error, refetch } = useFetch<ContractDataType>(`/contracts/${id}`);
   const { status: verificationStatus, errorMessage: verificationError } = useVerifyContractApi(`/contracts/verify_contracts/${contract?.id}`);
+
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const { mutate: viewContract, isLoading } = useViewContract();
 
   const handleSignContract = async (signature: string) => {
     console.log("Đã ký (giả lập):", signature);
@@ -62,7 +66,7 @@ const ContractDetail: React.FC = () => {
     });
     setIsSignatureDialogOpen(false);
   };
-  console.log(contract)
+
   if (loading) {
     return <div className="flex h-full items-center justify-center p-10">
       <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
@@ -82,6 +86,46 @@ const ContractDetail: React.FC = () => {
       </Link>
     </div>;
   }
+
+  const handleViewFile = async () => {
+    try {
+      const blob = await viewContract(contract.id);
+      const url = URL.createObjectURL(blob);
+      setFileUrl(url);
+      setShowViewer(true);
+    } catch (err) {
+      console.error("Không thể xem hợp đồng:", err);
+      toast({
+        title: "Lỗi xem hợp đồng",
+        description: "Không thể xem hợp đồng. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadFile = async () => {
+    try {
+      const blob = await viewContract(contract.id);
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${contract.title || "hop_dong"}.pdf`;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+    } catch (err) {
+      console.error("Không thể tải hợp đồng:", err);
+      toast({
+        title: "Lỗi tải file",
+        description: "Không thể tải file hợp đồng. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getStatusBadge = () => {
     switch (contract.status) {
@@ -121,7 +165,7 @@ const ContractDetail: React.FC = () => {
     }
   };
   return (
-    <div className="p-4 md:p-8">
+    <div className="max-w-7xl mx-auto p-4 md:p-8">
       <div className="mb-6">
         <Link to="/contracts" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
           <ArrowLeft className="mr-1 h-4 w-4" />
@@ -143,16 +187,17 @@ const ContractDetail: React.FC = () => {
         </div>
         <div className="flex space-x-3">
           <button
-            onClick={() =>
-              window.open(
-                contract.file_url,
-                "_blank"
-              )
-            }
-            disabled={!verificationStatus}
-            className={`inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-gray-700 hover:bg-gray-50`}
+            onClick={handleDownloadFile}
+            disabled={isLoading}
+            className={`inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ${isLoading ? "cursor-not-allowed opacity-50" : "hover:bg-gray-50"
+              }`}
           >
-            Tải xuống
+            {isLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FileText className="mr-2 h-4 w-4" />
+            )}
+            {isLoading ? "Đang xử lý..." : "Tải xuống hợp đồng"}
           </button>
 
 
@@ -178,7 +223,6 @@ const ContractDetail: React.FC = () => {
               </div>
             </div>
             <div className="border-t border-gray-200">
-
               {!showViewer && (
                 <div className="flex h-64 flex-col items-center justify-center p-6 text-center">
                   <FileText className="h-12 w-12 text-gray-400" />
@@ -186,29 +230,30 @@ const ContractDetail: React.FC = () => {
                     Nội dung file đang được niêm phong.
                   </p>
                   <button
-                    disabled={!verificationStatus}
-                    onClick={() => setShowViewer(true)}
-                    className="mt-4 inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    disabled={!verificationStatus || isLoading}
+                    onClick={handleViewFile}
+                    className={`mt-4 inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${!verificationStatus || isLoading ? "opacity-50 cursor-not-allowed" : "hover:bg-indigo-700"
+                      }`}
                   >
                     <Eye className="mr-2 h-4 w-4" />
-                    Xem nội dung file
+                    {isLoading ? "Đang tải..." : "Xem nội dung file"}
                   </button>
                   <p className="mt-3 text-xs text-gray-400">
                     Hệ thống sẽ xác thực tính toàn vẹn của file trước khi hiển thị.
                   </p>
                 </div>
               )}
-              {showViewer && contract?.file_url && (
+
+              {showViewer && fileUrl && (
                 <iframe
-                  src={`https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(contract.file_url)}`}
+                  src={fileUrl}
                   title={`Nội dung file ${contract.title}`}
                   className="w-full h-[800px]"
                   style={{ border: "none" }}
                   allow="fullscreen"
-
                 >
                   Trình duyệt của bạn không hỗ trợ iframe.
-                  <a href={contract.file_url} target="_blank" rel="noopener noreferrer">
+                  <a href={fileUrl} target="_blank" rel="noopener noreferrer">
                     Nhấn vào đây để xem file.
                   </a>
                 </iframe>

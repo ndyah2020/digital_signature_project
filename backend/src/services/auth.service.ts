@@ -21,9 +21,8 @@ export class AuthService {
       privateKeyEncoding: { type: "pkcs8", format: "pem" },
     });
 
-    // Mã hóa khóa riêng tư bằng mật khẩu của user (hoặc secret nội bộ)
-    //    AES-256-CBC để bảo mật private key
-    const encryptionKey = crypto.createHash("sha256").update(password).digest(); // key 32 bytes
+
+    const encryptionKey = crypto.createHash("sha256").update(password).digest(); 
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv("aes-256-cbc", encryptionKey, iv);
     let encrypted = cipher.update(privateKey, "utf8", "base64");

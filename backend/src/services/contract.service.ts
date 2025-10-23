@@ -6,6 +6,9 @@ import { Contract, ContractStatus } from "../entities/Contract";
 import { AuditLogService } from "../services/auditLog.service";
 import { User, UserRole } from "../entities/User";
 import { ContractRecipient, SignStatus } from "../entities/ContractRecipient";
+import { Response } from "express";
+
+
 const fs = require("fs");
 const crypto = require("crypto");
 
@@ -44,7 +47,7 @@ export class ContractService {
     });
     const viewUrl = result.secure_url.replace(
       "/upload/",
-      "/upload/fl_attachment:true/"
+      `/upload/fl_attachment:${finalPublicId.split('.')[0]}/`
     );
 
     fs.unlinkSync(file.path);
@@ -89,7 +92,6 @@ export class ContractService {
 
   async verifyContractIntegrity(id: number): Promise<{ status: string; message: string }> {
     let contract;
-
     try {
       contract = await this.contractRepository.findOne({ where: { id } });
       if (!contract) {
@@ -144,6 +146,37 @@ export class ContractService {
       throw error;
     }
   }
+  async viewContract(contractId: number, userId: number, res: Response) {
+    const contract = await this.contractRepository.findOne({
+      where: { id: contractId },
+      relations: ["createdBy", "signatures", "signatures.user"],
+    });
+
+    if (!contract) throw new Error("Không tìm thấy hợp đồng");
+
+    const isOwner = contract.createdBy.id === userId;
+    const isSigner = contract.signatures.some((s) => s.user.id === userId);
+
+    if (!isOwner && !isSigner) {
+      throw new Error("Bạn không có quyền xem hợp đồng này");
+    }
+
+    const fileUrl = contract.file_url;
+    if (!fileUrl) {
+      throw new Error("Hợp đồng này chưa có file đính kèm");
+    }
+
+    await this.auditLogService.createLog(
+      userId,
+      "VIEW_CONTRACT",
+      `Xem hợp đồng: ${contract.title}`
+    );
+
+    // Stream file từ Cloudinary
+    const response = await axios.get(fileUrl, { responseType: "stream" });
+    res.setHeader("Content-Type", "application/pdf");
+    response.data.pipe(res);
+  }
 
   async getContractById(id: number) {
     const contract = await this.contractRepository.findOne({
@@ -153,7 +186,6 @@ export class ContractService {
         id: true,
         title: true,
         description: true,
-        file_url: true,
         hash: true,
         status: true,
         fileSize: true,
@@ -180,6 +212,7 @@ export class ContractService {
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
     return contract;
   }
+
   async updateStatus(id: number, status: string, userId: number) {
     const validStatuses = ["draft", "pending", "signed", "cancelled"];
     if (!validStatuses.includes(status))
