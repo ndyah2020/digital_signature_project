@@ -1,5 +1,6 @@
 import axios from "axios";
 import cloudinary from "../config/cloudinary";
+import * as path from 'path';
 import { AppDataSource } from "../config/data_source";
 import { Contract, ContractStatus } from "../entities/Contract";
 import { AuditLogService } from "../services/auditLog.service";
@@ -21,15 +22,25 @@ export class ContractService {
     description: string,
     createdBy: number,
   ) {
+    const extension = path.extname(file.originalname);
+    const baseName = path.basename(file.originalname, extension);
+    const cleanBaseName = baseName
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9-]/g, "_")
+      .replace(/_{2,}/g, "_");
+
+    const finalPublicId = `${cleanBaseName}${extension}`;
     const fileBuffer = fs.readFileSync(file.path);
     const hash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
 
     const result = await cloudinary.uploader.upload(file.path, {
       resource_type: "raw",
       type: "upload",
-      upload_preset: "unsigned_raw",
       folder: "contracts",
-      public_id: file.originalname.replace(/\.[^/.]+$/, ""),
+      public_id: finalPublicId,
+      use_filename: true,
+      unique_filename: false,
     });
 
     const viewUrl = result.secure_url.replace(
@@ -42,7 +53,7 @@ export class ContractService {
     const contract = this.contractRepository.create({
       title,
       description,
-      file_url: viewUrl, // Lưu URL đã sửa đúng
+      file_url: viewUrl,
       fileType: file.mimetype,
       fileSize: file.size,
       hash,
@@ -58,6 +69,7 @@ export class ContractService {
     );
     return contract;
   }
+
   // Lấy tất cả hợp đồng
   async getAllContracts() {
     return await this.contractRepository.find({
@@ -76,39 +88,63 @@ export class ContractService {
     });
   }
 
-  async verifyContractIntegrity(id: number): Promise<{ status: string, message: string }> {
-    try {
-      const contract = await this.contractRepository.findOne({ where: { id } });
-      if (!contract) {
-        throw new Error("Không tìm thấy hợp đồng");
-      }
-
-      const storedHash = contract.hash;
-      const fileUrl = contract.file_url;
-
-      if (!fileUrl) {
-        throw new Error("Không tìm thấy file URL của hợp đồng này.");
-      }
-
-      const response = await fetch(fileUrl);
-      if (!response.ok) {
-        throw new Error(`Không thể tải file từ Cloudinary: ${response.statusText}`);
-      }
-      const fileArrayBuffer = await response.arrayBuffer();
-      const fileBuffer = Buffer.from(fileArrayBuffer);
-      const calculatedHash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
-
-      if (calculatedHash === storedHash) {
-        return { status: "verified", message: "File toàn vẹn." };
-      } else {
-        return { status: "mismatch", message: "Cảnh báo: File không khớp với bản gốc!" };
-      }
-
-    } catch (error: any) {
-      console.error("Lỗi khi xác thực hash:", error);
-      return { status: "error", message: error.message || "Lỗi không xác định" };
+  async verifyContractIntegrity(id: number): Promise<{ status: string; message: string }> {
+  let contract;
+  
+  try {
+    contract = await this.contractRepository.findOne({ where: { id } });
+    if (!contract) {
+      throw new Error("404: Không tìm thấy hợp đồng");
     }
+
+    const storedHash = contract.hash;
+    const fileUrl = contract.file_url;
+
+    if (!fileUrl) {
+      throw new Error("404: Không tìm thấy file URL của hợp đồng này.");
+    }
+
+    const response = await axios.get(fileUrl, {
+      responseType: 'arraybuffer', 
+    });
+
+    const fileBuffer = Buffer.from(response.data);
+    const calculatedHash = crypto
+      .createHash('sha256')
+      .update(fileBuffer)
+      .digest('hex');
+
+    if (calculatedHash === storedHash) {
+      return { status: 'verified', message: 'File toàn vẹn.' };
+    } else {
+      console.warn(`[HASH MISMATCH] Hợp đồng #${id}. Lưu trữ: ${storedHash}, Tính toán: ${calculatedHash}`);
+      return { status: 'mismatch', message: 'Cảnh báo: File không khớp với bản gốc!' };
+    }
+
+  } catch (error: any) {
+    if (axios.isAxiosError(error) && error.response) {
+      const status = error.response.status;
+
+      if (status === 404) {
+        throw new Error(`404: File không tồn tại trên Cloudinary.`);
+      }
+      if (status === 401 || status === 403) {
+        let errorBody = 'Lỗi không được phép';
+        try {
+          const errorDataString = Buffer.from(error.response.data).toString('utf-8');
+          const errorJson = JSON.parse(errorDataString);
+          errorBody = errorJson.error?.message || errorBody;
+        } catch (e) {}
+        
+        if (errorBody.includes('untrusted customer') || errorBody.includes('Unauthorized')) {
+          throw new Error(`401: Lỗi Cloudinary: Tài khoản chưa được xác minh (untrusted). Vui lòng thêm thẻ thanh toán.`);
+        }
+      }
+      throw new Error(`500: Lỗi từ Cloudinary: ${error.response.statusText}`);
+    }
+    throw error;
   }
+}
 
   async downloadContractFile(id: number) {
     const contract = await this.contractRepository.findOne({ where: { id } });
