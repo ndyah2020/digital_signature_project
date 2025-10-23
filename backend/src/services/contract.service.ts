@@ -42,7 +42,6 @@ export class ContractService {
       use_filename: true,
       unique_filename: false,
     });
-
     const viewUrl = result.secure_url.replace(
       "/upload/",
       "/upload/fl_attachment:true/"
@@ -89,99 +88,62 @@ export class ContractService {
   }
 
   async verifyContractIntegrity(id: number): Promise<{ status: string; message: string }> {
-  let contract;
-  
-  try {
-    contract = await this.contractRepository.findOne({ where: { id } });
-    if (!contract) {
-      throw new Error("404: Không tìm thấy hợp đồng");
-    }
+    let contract;
 
-    const storedHash = contract.hash;
-    const fileUrl = contract.file_url;
-
-    if (!fileUrl) {
-      throw new Error("404: Không tìm thấy file URL của hợp đồng này.");
-    }
-
-    const response = await axios.get(fileUrl, {
-      responseType: 'arraybuffer', 
-    });
-
-    const fileBuffer = Buffer.from(response.data);
-    const calculatedHash = crypto
-      .createHash('sha256')
-      .update(fileBuffer)
-      .digest('hex');
-
-    if (calculatedHash === storedHash) {
-      return { status: 'verified', message: 'File toàn vẹn.' };
-    } else {
-      console.warn(`[HASH MISMATCH] Hợp đồng #${id}. Lưu trữ: ${storedHash}, Tính toán: ${calculatedHash}`);
-      return { status: 'mismatch', message: 'Cảnh báo: File không khớp với bản gốc!' };
-    }
-
-  } catch (error: any) {
-    if (axios.isAxiosError(error) && error.response) {
-      const status = error.response.status;
-
-      if (status === 404) {
-        throw new Error(`404: File không tồn tại trên Cloudinary.`);
+    try {
+      contract = await this.contractRepository.findOne({ where: { id } });
+      if (!contract) {
+        throw new Error("404: Không tìm thấy hợp đồng");
       }
-      if (status === 401 || status === 403) {
-        let errorBody = 'Lỗi không được phép';
-        try {
-          const errorDataString = Buffer.from(error.response.data).toString('utf-8');
-          const errorJson = JSON.parse(errorDataString);
-          errorBody = errorJson.error?.message || errorBody;
-        } catch (e) {}
-        
-        if (errorBody.includes('untrusted customer') || errorBody.includes('Unauthorized')) {
-          throw new Error(`401: Lỗi Cloudinary: Tài khoản chưa được xác minh (untrusted). Vui lòng thêm thẻ thanh toán.`);
+
+      const storedHash = contract.hash;
+      const fileUrl = contract.file_url;
+
+      if (!fileUrl) {
+        throw new Error("404: Không tìm thấy file URL của hợp đồng này.");
+      }
+
+      const response = await axios.get(fileUrl, {
+        responseType: 'arraybuffer',
+      });
+
+      const fileBuffer = Buffer.from(response.data);
+      const calculatedHash = crypto
+        .createHash('sha256')
+        .update(fileBuffer)
+        .digest('hex');
+
+      if (calculatedHash === storedHash) {
+        return { status: 'verified', message: 'File toàn vẹn.' };
+      } else {
+        console.warn(`[HASH MISMATCH] Hợp đồng #${id}. Lưu trữ: ${storedHash}, Tính toán: ${calculatedHash}`);
+        return { status: 'mismatch', message: 'Cảnh báo: File không khớp với bản gốc!' };
+      }
+
+    } catch (error: any) {
+      if (axios.isAxiosError(error) && error.response) {
+        const status = error.response.status;
+
+        if (status === 404) {
+          throw new Error(`404: File không tồn tại trên Cloudinary.`);
         }
+        if (status === 401 || status === 403) {
+          let errorBody = 'Lỗi không được phép';
+          try {
+            const errorDataString = Buffer.from(error.response.data).toString('utf-8');
+            const errorJson = JSON.parse(errorDataString);
+            errorBody = errorJson.error?.message || errorBody;
+          } catch (e) { }
+
+          if (errorBody.includes('untrusted customer') || errorBody.includes('Unauthorized')) {
+            throw new Error(`401: Lỗi Cloudinary: Tài khoản chưa được xác minh (untrusted). Vui lòng thêm thẻ thanh toán.`);
+          }
+        }
+        throw new Error(`500: Lỗi từ Cloudinary: ${error.response.statusText}`);
       }
-      throw new Error(`500: Lỗi từ Cloudinary: ${error.response.statusText}`);
+      throw error;
     }
-    throw error;
   }
-}
-
-  async downloadContractFile(id: number) {
-    const contract = await this.contractRepository.findOne({ where: { id } });
-    if (!contract || !contract.file_url) {
-      throw new Error("Không tìm thấy file hợp đồng.");
-    }
-
-    // 🟢 Lấy file binary trực tiếp từ Cloudinary
-    const response = await axios.get(contract.file_url, {
-      responseType: "arraybuffer",
-    });
-
-    // 🟢 Xác định loại MIME chính xác
-    const mimeType =
-      response.headers["content-type"] ||
-      contract.fileType ||
-      "application/octet-stream";
-
-    // 🟢 Tạo tên file an toàn
-    const ext =
-      mimeType === "application/pdf"
-        ? ".pdf"
-        : mimeType.includes("word")
-          ? ".docx"
-          : "";
-    const fileName = contract.title
-      ? `${contract.title}${ext}`
-      : `contract${ext}`;
-
-    // 🟢 Trả về file data
-    return {
-      fileName,
-      mimeType,
-      fileBuffer: Buffer.from(response.data),
-    };
-  }
-
 
   async getContractById(id: number) {
     const contract = await this.contractRepository.findOne({
@@ -196,6 +158,7 @@ export class ContractService {
         status: true,
         fileSize: true,
         fileType: true,
+        createdAt: true,
         createdBy: {
           name: true,
           email: true,
@@ -217,7 +180,6 @@ export class ContractService {
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
     return contract;
   }
-  // Cập nhật trạng thái hợp đồng
   async updateStatus(id: number, status: string, userId: number) {
     const validStatuses = ["draft", "pending", "signed", "cancelled"];
     if (!validStatuses.includes(status))
@@ -229,8 +191,6 @@ export class ContractService {
     });
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
 
-    // (Tuỳ chọn) có thể kiểm tra role của user trước khi đổi trạng thái
-
     contract.status = status as ContractStatus;
     contract.updatedAt = new Date();
     await this.contractRepository.save(contract);
@@ -241,7 +201,7 @@ export class ContractService {
     );
     return contract;
   }
-  // Gán hợp đồng cho người dùng (chỉ creator hoặc admin)
+
   async assignContractToUser(
     contractId: number,
     senderId: number,
@@ -251,7 +211,7 @@ export class ContractService {
       where: { id: contractId },
     });
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
-    // Lấy thông tin người tạo (để kiểm tra quyền)
+
     const actor = await this.userRepository.findOne({
       where: { id: senderId },
     });
@@ -272,7 +232,6 @@ export class ContractService {
       })
     );
     await this.recipientRepository.save(recipients);
-    // Nếu hợp đồng là draft, khi assign -> chuyển sang pending
     if (contract.status === ContractStatus.DRAFT)
       contract.status = ContractStatus.PENDING;
     contract.updatedAt = new Date();
@@ -285,7 +244,7 @@ export class ContractService {
     return contract;
   }
 
-  // Cập nhật metadata hợp đồng (chỉ admin hoặc creator)
+
   async updateContractMetadata(
     contractId: number,
     updateData: Partial<Contract>,

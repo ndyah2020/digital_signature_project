@@ -77,28 +77,6 @@ export class ContractController {
     }
   }
 
-  async downloadContract(req: Request, res: Response) {
-    try {
-      const { id } = req.params;
-      const { fileName, mimeType, fileBuffer } =
-        await this.service.downloadContractFile(parseInt(id));
-
-      res.setHeader("Content-Type", mimeType);
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="${encodeURIComponent(fileName)}"`
-      );
-      res.setHeader("Content-Length", fileBuffer.length);
-
-      res.end(fileBuffer);
-    } catch (error: any) {
-      console.error("Lỗi khi tải file:", error);
-      res
-        .status(500)
-        .json({ message: error.message || "Lỗi khi tải file xuống" });
-    }
-  }
-
   // [PATCH] /contracts/:id/status  → Cập nhật trạng thái (draft → pending/signed)
   async updateStatus(req: Request, res: Response) {
     try {

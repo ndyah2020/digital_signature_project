@@ -6,7 +6,6 @@ import { formatDate } from '../utils/helpers';
 import SignatureDialog from '../components/SignatureDialog';
 import { ContractDataType } from '../type/contract.type'
 import useFetch from '../hooks/useFetch'
-import useDownload from '../hooks/useDowload';
 import { useVerifyContractApi, VerificationStatus } from '../hooks/useVerifyHash';
 
 const VerificationStatusBadge: React.FC<{ status: VerificationStatus; errorMessage: string | null }> = ({ status, errorMessage }) => {
@@ -49,23 +48,10 @@ const ContractDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
-
+    
   const { toast } = useToast();
   const { data: contract, loading, error, refetch } = useFetch<ContractDataType>(`/contracts/${id}`);
   const { status: verificationStatus, errorMessage: verificationError } = useVerifyContractApi(`/contracts/verify_contracts/${contract?.id}`);
-
-  const { downloadFile, loading: loadingDown, error: errorDown } = useDownload(`/contracts/download/${contract?.id}`, contract?.title);
-
-
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: "Lỗi tải hợp đồng",
-        description: error.message || "Không thể tải thông tin hợp đồng.",
-        variant: "destructive",
-      });
-    }
-  }, [error, toast]);
 
   const handleSignContract = async (signature: string) => {
     console.log("Đã ký (giả lập):", signature);
@@ -76,7 +62,7 @@ const ContractDetail: React.FC = () => {
     });
     setIsSignatureDialogOpen(false);
   };
-
+  console.log(contract)
   if (loading) {
     return <div className="flex h-full items-center justify-center p-10">
       <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
@@ -157,20 +143,18 @@ const ContractDetail: React.FC = () => {
         </div>
         <div className="flex space-x-3">
           <button
-            onClick={() => downloadFile()}
-            disabled={loadingDown}
-            className={`inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${loadingDown
-                ? "cursor-not-allowed opacity-70 text-gray-400"
-                : "text-gray-700 hover:bg-gray-50"
-              }`}
+            onClick={() =>
+              window.open(
+                contract.file_url,
+                "_blank"
+              )
+            }
+            disabled={!verificationStatus}
+            className={`inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-gray-700 hover:bg-gray-50`}
           >
-            {loadingDown ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin text-indigo-500" />
-            ) : (
-              <Download className="mr-2 h-4 w-4" />
-            )}
-            {loadingDown ? "Đang tải..." : "Tải xuống"}
+            Tải xuống
           </button>
+
 
           <button
             onClick={() => setIsSignatureDialogOpen(true)}
@@ -202,6 +186,7 @@ const ContractDetail: React.FC = () => {
                     Nội dung file đang được niêm phong.
                   </p>
                   <button
+                    disabled={!verificationStatus}
                     onClick={() => setShowViewer(true)}
                     className="mt-4 inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                   >
@@ -220,6 +205,7 @@ const ContractDetail: React.FC = () => {
                   className="w-full h-[800px]"
                   style={{ border: "none" }}
                   allow="fullscreen"
+
                 >
                   Trình duyệt của bạn không hỗ trợ iframe.
                   <a href={contract.file_url} target="_blank" rel="noopener noreferrer">
