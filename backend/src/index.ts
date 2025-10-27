@@ -8,6 +8,7 @@ import { authMiddleware } from "./middlewares/auth.middlewares";
 import contractRoutes from "./routes/contract.routes";
 import signatureRoutes from "./routes/signature.routes";
 import userRoutes from "./routes/user.routes";
+import twofaRoutes from "./routes/twofa.routes";
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -15,7 +16,7 @@ app.use(express.json());
 // Mount routes
 app.use("/auth", authRoutes);
 app.use(authMiddleware);
-
+app.use("/2fa", twofaRoutes);
 app.use("/users", userRoutes);
 app.use("/contracts", contractRoutes);
 app.use("/signatures", signatureRoutes);

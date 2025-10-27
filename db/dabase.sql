@@ -87,6 +87,9 @@ REFERENCES users(id)
 ON DELETE SET NULL
 ON UPDATE CASCADE;
 
+ALTER TABLE users
+ADD COLUMN totp_secret TEXT NULL,
+ADD COLUMN is_totp_enabled BOOLEAN DEFAULT FALSE;
 -- Tạo index hỗ trợ tìm kiếm nhanh
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_contracts_status ON contracts(status);

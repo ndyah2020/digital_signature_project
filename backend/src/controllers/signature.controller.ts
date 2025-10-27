@@ -7,28 +7,53 @@ export class SignatureController {
   // POST /signatures/sign
   async signContract(req: Request, res: Response) {
     try {
-      const { contractId, password } = req.body;
-      const userId = (req as any).user.sub; // Lấy userId từ token JWT
+      const userId = (req as any).user.sub; // lấy từ JWT payload
+      const {
+        contractId,
+        password,
+        totpToken, // từ body
+        emailOtp, // fallback
+      } = req.body as {
+        contractId: number;
+        password: string;
+        totpToken?: string;
+        emailOtp?: string;
+      };
 
+      // --- Validate input ---
       if (!contractId || !password) {
         return res
           .status(400)
           .json({ message: "Thiếu contractId hoặc password" });
       }
 
-      const signature = await this.signatureService.signContract(
+      // Nếu user có bật TOTP mà client không gửi mã
+      const user = (req as any).user;
+      if (user?.isTotpEnabled && !totpToken) {
+        return res.status(400).json({
+          message: "Tài khoản này đã bật 2FA, vui lòng nhập mã TOTP.",
+        });
+      }
+
+      // --- Gọi service ---
+      const result = await this.signatureService.signContract(
         contractId,
         userId,
-        password
+        password,
+        totpToken || "", // tránh undefined
+        emailOtp || ""
       );
 
       return res.status(201).json({
-        message: "Ký hợp đồng thành công",
-        signature,
+        message: result.message,
+        signatureId: result.signatureId,
+        isValid: result.isValid,
       });
     } catch (error: any) {
       console.error("Lỗi khi ký hợp đồng:", error);
-      return res.status(400).json({ message: error.message });
+      return res
+        .status(400)
+        .json({ message: error.message || "Lỗi ký hợp đồng" });
     }
   }
   // POST /signatures/:id/verify

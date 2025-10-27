@@ -4,30 +4,39 @@ import { Signature } from "../entities/Signature";
 import { User, UserRole } from "../entities/User";
 import { AuditLogService } from "../services/auditLog.service";
 import { ContractRecipient, SignStatus } from "../entities/ContractRecipient";
+import { TwoFAService } from "../services/twofa.service";
+const speakeasy = require("speakeasy");
 const crypto = require("crypto");
 export class SignatureService {
   private signatureRepository = AppDataSource.getRepository(Signature);
   private userRepository = AppDataSource.getRepository(User);
   private contractRepository = AppDataSource.getRepository(Contract);
   private auditService = new AuditLogService();
+  private twoFAService = new TwoFAService();
   // ký hợp đồng
-  async signContract(contractId: number, userId: number, password: string) {
+  async signContract(
+    contractId: number,
+    userId: number,
+    password: string,
+    totpToken?: string,
+    emailOtp?: string
+  ) {
     return await AppDataSource.manager.transaction(async (tx) => {
       const contractRepo = tx.getRepository(Contract);
       const recipientRepo = tx.getRepository(ContractRecipient);
       const signatureRepo = tx.getRepository(Signature);
       const userRepo = tx.getRepository(User);
 
-      // Lấy thông tin hợp đồng và người dùng
       const contract = await contractRepo.findOne({
         where: { id: contractId },
+        relations: ["signatures", "signatures.user"],
       });
       if (!contract) throw new Error("Hợp đồng không tồn tại");
 
       const user = await userRepo.findOne({ where: { id: userId } });
       if (!user) throw new Error("Người dùng không tồn tại");
 
-      // Kiểm tra quyền ký
+      // Kiểm tra quyền
       const link = await recipientRepo.findOne({
         where: { contractId, userId },
       });
@@ -35,28 +44,88 @@ export class SignatureService {
       if (
         user.role !== UserRole.ADMIN &&
         !isRecipient &&
-        contract.createdBy?.id !== userId
+        user.role !== UserRole.SIGNER
       ) {
         throw new Error("Bạn không có quyền ký hợp đồng này");
       }
 
-      if (link && link.sign_status === SignStatus.SIGNED) {
-        throw new Error("Bạn đã ký hợp đồng này rồi");
-      }
+      if (link && link.sign_status === SignStatus.SIGNED)
+        throw new Error("Bạn đã ký rồi");
 
-      if (!user.privateKeyEncrypted) {
+      if (!user.privateKeyEncrypted)
         throw new Error("Không tìm thấy private key");
+
+      // --- Xác minh OTP/TOTP ---
+      if (user.isTotpEnabled && user.totpSecret) {
+        if (!totpToken) {
+          throw new Error("Thiếu mã TOTP");
+        }
+        const ok = this.twoFAService.verifyTOTP(user, totpToken);
+        if (!ok) throw new Error("Mã TOTP không hợp lệ");
+      } else {
+        // fallback: kiểm tra emailOtp nếu bạn đã gửi trước đó
+        // implement verifyEmailOtp(userId, emailOtp) theo logic bạn chọn (store OTP temp, expiry, attempts)
+        if (!emailOtp) throw new Error("Yêu cầu mã xác thực qua email");
+        const okEmail = await this.twoFAService.verifyEmailOtp(
+          userId,
+          emailOtp
+        );
+        if (!okEmail) throw new Error("Mã email OTP không hợp lệ");
       }
 
-      //Giải mã private key bằng password user
+      // --- Trước khi ký: xác minh tất cả chữ ký hiện có để đảm bảo file/hash không bị thay đổi ---
+      const currentHash = contract.hash;
+      if (!currentHash)
+        throw new Error("Hợp đồng chưa có giá trị hash để xác minh");
+
+      // Nếu có chữ ký trước đó, cần verify từng chữ ký đó với publicKey của người ký tương ứng
+      if (contract.signatures && contract.signatures.length > 0) {
+        for (const existingSig of contract.signatures) {
+          // existingSig.user có thể là undefined nếu relation không đầy đủ — bảo đảm có relation khi query
+          if (!existingSig.user || !existingSig.user.publicKey) {
+            throw new Error(
+              `Không thể xác minh chữ ký (thiếu publicKey cho signature id=${existingSig.id})`
+            );
+          }
+
+          try {
+            const verifier = crypto.createVerify("RSA-SHA256");
+            verifier.update(currentHash);
+            verifier.end();
+            const ok = verifier.verify(
+              {
+                key: existingSig.user.publicKey,
+                padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+                saltLength: 32,
+              },
+              Buffer.from(existingSig.signatureHash, "base64")
+            );
+            if (!ok) {
+              throw new Error(
+                `Phát hiện chữ ký không hợp lệ từ ${existingSig.user.email}. Hủy thao tác ký để bảo toàn an toàn.`
+              );
+            }
+          } catch (err: any) {
+            // Bất kỳ lỗi verify nào cũng dừng quy trình ký để tránh gắn thêm chữ ký vào hợp đồng bị thay đổi
+            throw new Error(
+              `Xác minh chữ ký hiện có thất bại: ${err.message || err}`
+            );
+          }
+        }
+      }
+
+      //  Giải mã private key bằng password + pepper
+      const pepper = process.env.SERVER_PEPPER || "";
+      const encryptionKey = crypto
+        .createHash("sha256")
+        .update(password + pepper)
+        .digest();
+
+      // Giải mã private key
       let privateKey: string;
       try {
         const [ivBase64, encryptedData] = user.privateKeyEncrypted.split(":");
         const iv = Buffer.from(ivBase64, "base64");
-        const encryptionKey = crypto
-          .createHash("sha256")
-          .update(password)
-          .digest();
         const decipher = crypto.createDecipheriv(
           "aes-256-cbc",
           encryptionKey,
@@ -69,26 +138,31 @@ export class SignatureService {
         throw new Error("Giải mã khóa riêng tư thất bại. Mật khẩu có thể sai.");
       }
 
-      // Tạo chữ ký số (RSA-PSS-SHA256)
+      // Ký hash hợp đồng bằng privateKey (RSA-PSS-SHA256)
       const signer = crypto.createSign("RSA-SHA256");
       signer.update(contract.hash);
       signer.end();
-
       const signatureBuffer = signer.sign({
         key: privateKey,
         padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
         saltLength: 32,
       });
-
       const signatureHash = signatureBuffer.toString("base64");
 
-      //Xác minh chữ ký bằng publicKey của user
+      // Xóa private key khỏi bộ nhớ an toàn
+      const temp = Buffer.from(privateKey, "utf8");
+      temp.fill(0);
+      privateKey = "";
+
+      // Immediately wipe privateKey variable
+      privateKey = "";
+
+      // Verify with publicKey as additional check
       let isValid = false;
       try {
         const verifier = crypto.createVerify("RSA-SHA256");
         verifier.update(contract.hash);
         verifier.end();
-
         isValid = verifier.verify(
           {
             key: user.publicKey,
@@ -101,7 +175,7 @@ export class SignatureService {
         isValid = false;
       }
 
-      // Lưu chữ ký vào DB
+      // Save signature & update recipient as before
       const newSignature = signatureRepo.create({
         contract: { id: contractId },
         user: { id: userId },
@@ -111,34 +185,31 @@ export class SignatureService {
       });
       await signatureRepo.save(newSignature);
 
-      // Cập nhật trạng thái người ký (contract_recipients)
+      // Nếu là recipient, cập nhật sign_status và signed_at
       if (isRecipient) {
         link.sign_status = isValid ? SignStatus.SIGNED : SignStatus.FAILED;
         link.signed_at = new Date();
         await recipientRepo.save(link);
       }
 
-      //Nếu tất cả recipients đã ký hợp lệ → cập nhật contract.status = "signed"
+      // Cập nhật trạng thái hợp đồng: nếu không còn pending và không có failed -> signed
       const pendingCount = await recipientRepo.count({
         where: { contractId, sign_status: SignStatus.PENDING },
       });
       const failedCount = await recipientRepo.count({
         where: { contractId, sign_status: SignStatus.FAILED },
       });
-
       if (pendingCount === 0 && failedCount === 0) {
         contract.status = ContractStatus.SIGNED;
         contract.updatedAt = new Date();
         await contractRepo.save(contract);
-
         await this.auditService.createLog(
           userId,
           "CONTRACT_FULLY_SIGNED",
-          `Hợp đồng #${contractId} đã được ký đầy đủ bởi tất cả người nhận.`
+          `Hợp đồng #${contractId} đã được ký đầy đủ.`
         );
       }
 
-      // Ghi log hành động ký
       await this.auditService.createLog(
         userId,
         "SIGN_CONTRACT",
@@ -146,7 +217,6 @@ export class SignatureService {
           isValid ? "Hợp lệ" : "Không hợp lệ"
         })`
       );
-
       return {
         message: isValid ? "Ký hợp đồng thành công" : "Chữ ký không hợp lệ",
         signatureId: newSignature.id,

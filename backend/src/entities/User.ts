@@ -63,4 +63,10 @@ export class User {
 
   @OneToMany(() => ContractRecipient, (cr) => cr.user)
   recipientLinks: ContractRecipient[];
+
+  @Column({ name: "totp_secret", type: "text", nullable: true })
+  totpSecret: string | null;
+
+  @Column({ name: "is_totp_enabled", type: "boolean", default: false })
+  isTotpEnabled: boolean;
 }
