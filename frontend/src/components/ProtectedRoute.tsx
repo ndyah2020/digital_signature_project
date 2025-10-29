@@ -13,9 +13,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const {
     isAuthenticated,
     user,
-    loading,
+    isLoading,
   } = useAuth();
-  if (loading) {
+  if (isLoading) {
     return <div className="flex h-screen w-full items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
       </div>;

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, FileText, Download } from 'lucide-react';
+import { Plus, FileText, Download, User} from 'lucide-react';
 import DataTable from '../components/DataTable';
 import ContractUploader from '../components/ContractUploader';
 import ContractEditor from "../components/ContractEditor";
+import ContractAssigner from '../components/ContractAssigner';
 import { formatDate, formatContractStatus } from '../utils/helpers';
 
 import {
@@ -20,8 +21,9 @@ const Contracts: React.FC = () => {
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
   const { data: contracts, loading, error, refetch } = useFetch<ContractDataType[]>("/contracts");
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isAssignerOpen, setisAssignerOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractDataType | null>(null);
-
+  
 
   const { mutate: createMutate, isLoading: isCreating } = useCreateContract();
   const { mutate: updateMutate, isLoading: isUpdating } = useUpdateContract();
@@ -45,6 +47,10 @@ const Contracts: React.FC = () => {
     } catch (err) {
       console.error("Lỗi cập nhật hợp đồng (từ component):", err);
     }
+  };
+
+  const handleAssignSuccess = () => {
+    refetch();
   };
 
   const columns = [{
@@ -121,6 +127,18 @@ const Contracts: React.FC = () => {
       >
         Cập nhật
       </button>
+
+      <button 
+        className="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+        onClick={() => {
+          setisAssignerOpen(true);
+          setSelectedContract(contract);
+        }}
+      >
+        <User className="mr-1 h-3 w-3" />
+        Gán
+      </button>
+
     </div>
   }];
   if (loading) {
@@ -159,6 +177,14 @@ const Contracts: React.FC = () => {
       onClose={() => setIsEditOpen(false)}
       onSave={handleSaveEdit}
     />
+
+    <ContractAssigner
+      isOpen={isAssignerOpen}
+      contract={selectedContract}
+      onClose={() => setisAssignerOpen(false)}
+      onAssignSuccess={handleAssignSuccess}
+    />
+
   </div>;
 };
 export default Contracts;

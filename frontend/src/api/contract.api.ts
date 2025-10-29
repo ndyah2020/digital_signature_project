@@ -1,7 +1,6 @@
 import { api } from "../utils/api";
 import { useToast } from "../components/ui/use-toast";
 import { ContractDataType, ContractType, ContractUpdateType } from "../type/contract.type";
-  const { toast } = useToast();
 import { useMutation } from "../hooks/useMutation";
 
 
@@ -117,7 +116,7 @@ export const useUpdateContract = () => {
 
 
 export const useUpdateContractStatus = () => {
-
+  const { toast } = useToast();
   return useMutation(
     updateContractStatus,
     {
@@ -154,6 +153,7 @@ export const useViewContract = () => {
 };
 
 export const useAddRecipient = () => {
+  const { toast } = useToast();
   return useMutation(assignPartyMutation,
     {
       onSuccess: (contractId, recipientIds) => {
