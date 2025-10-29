@@ -26,3 +26,9 @@ export interface RegisterData {
     email: string;
     password: string;
 }
+
+export interface UserData {
+    id: number;
+    name: string;
+    email: string;
+}

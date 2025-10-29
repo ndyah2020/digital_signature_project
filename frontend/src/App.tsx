@@ -29,9 +29,9 @@ export function App() {
             <Route path="/contracts/:id" element={<ContractDetail />} />
             <Route path="/users" element={<ProtectedRoute requiredRole="admin">
                   <Users />
-                </ProtectedRoute>} />
+                {/* </ProtectedRoute>} />
             <Route path="/roles" element={<ProtectedRoute requiredRole="admin">
-                  <Roles />
+                  <Roles /> */}
                 </ProtectedRoute>} />
             <Route path="/logs" element={<ProtectedRoute requiredRole="admin">
                   <Logs />

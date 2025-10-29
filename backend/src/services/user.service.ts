@@ -13,6 +13,10 @@ export class UserService {
     return await this.userRepository.findOne({ where: { id: userId } });
   }
 
+  async getUserByEmail(email: string): Promise<User | null> {
+    return await this.userRepository.findOne({ where: { email: email } });
+  }
+
   // update thông tin người dùng
   async updateUser(userId: number, updateData: UpdateUserDTO): Promise<User> {
     const user = await this.userRepository.findOne({ where: { id: userId } });

@@ -7,12 +7,12 @@ export class SignatureController {
   // POST /signatures/sign
   async signContract(req: Request, res: Response) {
     try {
-      const userId = (req as any).user.sub; // lấy từ JWT payload
+      const userId = (req as any).user.sub; 
       const {
         contractId,
         password,
-        totpToken, // từ body
-        emailOtp, // fallback
+        totpToken, 
+        emailOtp, 
       } = req.body as {
         contractId: number;
         password: string;

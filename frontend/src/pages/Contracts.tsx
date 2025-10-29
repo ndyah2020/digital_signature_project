@@ -113,10 +113,6 @@ const Contracts: React.FC = () => {
         <FileText className="mr-1 h-3 w-3" />
         Chi tiết
       </Link>
-      <button className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100">
-        <Download className="mr-1 h-3 w-3" />
-        Tải xuống
-      </button>
       <button className="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700 hover:bg-yellow-100"
         onClick={() => {
           setIsEditOpen(true);

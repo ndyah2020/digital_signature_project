@@ -15,6 +15,16 @@ export class UserController {
     }
   }
 
+  async getUserByEmail(req: Request, res: Response) {
+    try {
+      const email = req.params.email;
+      const users = await this.userService.getUserByEmail(email);
+      return res.status(200).json(users);
+    }catch (error: any) {
+      return res.status(500).json({ message: error.message });
+    }
+  }
+
   // [PUT] /users/:id
   async updateUser(req: Request, res: Response) {
     try {

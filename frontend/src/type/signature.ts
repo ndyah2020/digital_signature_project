@@ -1,6 +1,11 @@
 export interface SignatureType {
-  id: number;
-  userId: number;
-  signedAt: string;
-  signatureData: string;
+  id: number,
+  signatureHash: string,
+  isValid: boolean,
+  signedAt: Date,
+  user: {
+    id: number,
+    name: string,
+    email: string,
+  },
 }

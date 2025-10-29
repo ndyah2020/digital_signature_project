@@ -28,12 +28,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     path: '/users',
     icon: <Users className="h-5 w-5" />,
     adminOnly: true
-  }, {
-    name: 'Vai trò',
-    path: '/roles',
-    icon: <Shield className="h-5 w-5" />,
-    adminOnly: true
-  }, {
+  },
+  //  {
+  //   name: 'Vai trò',
+  //   path: '/roles',
+  //   icon: <Shield className="h-5 w-5" />,
+  //   adminOnly: true
+  // },
+   {
     name: 'Nhật ký',
     path: '/logs',
     icon: <ClipboardList className="h-5 w-5" />,
