@@ -14,7 +14,16 @@ export class UserService {
   }
 
   async getUserByEmail(email: string): Promise<User | null> {
-    return await this.userRepository.findOne({ where: { email: email } });
+    return await this.userRepository.findOne(
+      { 
+        where: { email }, 
+        select: {
+          id: true,
+          email: true,
+          name: true
+        }
+      }   
+    );
   }
 
   // update thông tin người dùng

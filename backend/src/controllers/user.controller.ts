@@ -18,6 +18,7 @@ export class UserController {
   async getUserByEmail(req: Request, res: Response) {
     try {
       const email = req.params.email;
+      console.log(email)
       const users = await this.userService.getUserByEmail(email);
       return res.status(200).json(users);
     }catch (error: any) {

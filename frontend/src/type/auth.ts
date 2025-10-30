@@ -1,5 +1,5 @@
 export interface User {
-    sub: string;
+    sub: number;
     name: string;
     email: string;
     publicKey?: string;

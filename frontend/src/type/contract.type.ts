@@ -17,7 +17,7 @@ export interface ContractDataType {
   createdBy: {
     id: number,
     name: string,
-    emai: string,
+    email: string,
   };
   signatures: SignatureType[];
   createdAt: string;

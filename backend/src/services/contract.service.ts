@@ -72,7 +72,7 @@ export class ContractService {
     return contract;
   }
 
-  // Lấy tất cả hợp đồng
+
   async getAllContracts() {
     return await this.contractRepository.find({
       relations: ["createdBy"],
@@ -89,6 +89,29 @@ export class ContractService {
       },
     });
   }
+
+  // service
+  async getAllContractsByCreateAndRecipient(userId: number) {
+    return this.contractRepository.find({
+      where: [
+        { createdBy: { id: userId } },
+        { recipientLinks: { user: { id: userId } } },
+      ],
+      relations: ["createdBy", "recipientLinks", "recipientLinks.user"],
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        file_url: true,
+        hash: true,
+        status: true,
+        createdBy: {
+          email: true,
+        },
+      },
+    });
+  }
+
 
   async verifyContractIntegrity(id: number): Promise<{ status: string; message: string }> {
     let contract;

@@ -13,6 +13,6 @@ router.put("/:id", authMiddleware, (req, res) =>
   controller.updateUser(req, res)
 );
 
-router.get("/:email", authMiddleware, (req, res) => controller.getUserByEmail)
+router.get("/:email", authMiddleware, (req, res) => controller.getUserByEmail(req, res))
 
 export default router;

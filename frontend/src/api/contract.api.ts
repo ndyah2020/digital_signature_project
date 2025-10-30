@@ -55,9 +55,10 @@ const viewContract = async (id: number): Promise<Blob> => {
 };
 
 interface AssignPartyVariables {
-  contractId: string | number;
-  recipientIds: number;
+  contractId: number;
+  recipientIds: number[];
 }
+
 const assignPartyMutation = async ({ contractId, recipientIds }: AssignPartyVariables) => {
   const response = await api.post(
     `/contracts/${contractId}/assign`,
@@ -88,15 +89,12 @@ export const useCreateContract = () => {
   );
 };
 
-/**
- * Hook: Cập nhật hợp đồng
- */
+
 export const useUpdateContract = () => {
   const { toast } = useToast();
   return useMutation<ContractDataType, ContractUpdateType>(
-    updateContract, // Hàm API
+    updateContract, 
     {
-      // Options
       onSuccess: () => {
         toast({
           title: "✅ Cập nhật hợp đồng thành công!",
@@ -156,21 +154,20 @@ export const useAddRecipient = () => {
   const { toast } = useToast();
   return useMutation(assignPartyMutation,
     {
-      onSuccess: (contractId, recipientIds) => {
+      onSuccess: (_, variables) => {
+        const { contractId, recipientIds } = variables;
         toast({
-          title: "Đã thêm người dùng vào hợp đồng",
-          description: `người dùng ${contractId} đã được thêm vào hợp đồng ${recipientIds}.`, 
+          title: 'Đã thêm người dùng vào hợp đồng',
+          description: `Đã thêm ${recipientIds.length} người dùng vào hợp đồng ${contractId}.`,
         });
       },
-      onError: (err) => {
+      onError: (err: any) => {
         toast({
-          title: "Lỗi thêm người dùng vào hợp đồng",
-          description: err.message || "Không thể thêm người dùng vào hợp đồng.",
-          variant: "destructive",
+          title: 'Lỗi thêm người dùng vào hợp đồng',
+          description: err.message || 'Không thể thêm người dùng vào hợp đồng.',
+          variant: 'destructive',
         });
       },
     }
   )
-
-
 }

@@ -54,12 +54,9 @@ const ContractDetail: React.FC = () => {
   const { toast } = useToast();
   const { data: contract, loading, error } = useFetch<ContractDataType>(`/contracts/${id}`);
   const { status: verificationStatus, errorMessage: verificationError } = useVerifyContractApi(`/contracts/verify_contracts/${contract?.id}`);
-
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const { mutate: viewContract, isLoading } = useViewContract();
 
-  const [email, setEmail] = useState('');
-  const [isAssigning, setIsAssigning] = useState(false);
 
   const handleSignContract = async (signature: string) => {
     console.log("Đã ký (giả lập):", signature);
