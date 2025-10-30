@@ -169,18 +169,24 @@ export class ContractService {
       throw error;
     }
   }
+
   async viewContract(contractId: number, userId: number, res: Response) {
     const contract = await this.contractRepository.findOne({
       where: { id: contractId },
-      relations: ["createdBy", "signatures", "signatures.user"],
+      relations: [
+        "createdBy",
+        "recipientLinks",
+        "recipientLinks.user",
+      ],
     });
-
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
 
-    const isOwner = contract.createdBy.id === userId;
-    const isSigner = contract.signatures.some((s) => s.user.id === userId);
+    const isOwner = contract.createdBy?.id === userId;
+    const isRecipient = contract.recipientLinks.some(
+      (r) => r.user && r.user.id === userId
+    );
 
-    if (!isOwner && !isSigner) {
+    if (!isOwner && !isRecipient) {
       throw new Error("Bạn không có quyền xem hợp đồng này");
     }
 
@@ -189,52 +195,67 @@ export class ContractService {
       throw new Error("Hợp đồng này chưa có file đính kèm");
     }
 
-    await this.auditLogService.createLog(
-      userId,
-      "VIEW_CONTRACT",
-      `Xem hợp đồng: ${contract.title}`
-    );
-
-    // Stream file từ Cloudinary
     const response = await axios.get(fileUrl, { responseType: "stream" });
     res.setHeader("Content-Type", "application/pdf");
     response.data.pipe(res);
   }
 
+
+
   async getContractById(id: number) {
-    const contract = await this.contractRepository.findOne({
-      where: { id },
-      relations: ["createdBy", "signatures", "signatures.user"],
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        hash: true,
-        status: true,
-        fileSize: true,
-        fileType: true,
-        createdAt: true,
-        createdBy: {
-          name: true,
-          email: true,
-        },
-        signatures: {
-          id: true,
-          signatureHash: true,
-          isValid: true,
-          signedAt: true,
-          user: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
+    const contract = await this.contractRepository
+      .createQueryBuilder("contract")
+      // Liên kết bảng
+      .leftJoinAndSelect("contract.createdBy", "createdBy")
+      .leftJoinAndSelect("contract.signatures", "signatures")
+      .leftJoinAndSelect("signatures.user", "signatureUser")
+      .leftJoinAndSelect("contract.recipientLinks", "recipientLinks")
+      .leftJoinAndSelect("recipientLinks.user", "recipientUser")
+
+      // Điều kiện
+      .where("contract.id = :id", { id })
+
+      // Các trường cần lấy
+      .select([
+        "contract.id",
+        "contract.title",
+        "contract.description",
+        "contract.hash",
+        "contract.status",
+        "contract.file_url",
+        "contract.fileType",
+        "contract.fileSize",
+        "contract.createdAt",
+        "contract.updatedAt",
+
+        // Người tạo hợp đồng
+        "createdBy.id",
+        "createdBy.name",
+        "createdBy.email",
+
+        // Chữ ký
+        "signatures.id",
+        "signatures.signatureHash",
+        "signatures.isValid",
+        "signatures.signedAt",
+        "signatureUser.id",
+        "signatureUser.name",
+        "signatureUser.email",
+
+
+        "recipientLinks.sign_status",
+        "recipientLinks.signed_at",
+        "recipientUser.id",
+        "recipientUser.name",
+        "recipientUser.email",
+      ])
+      .getOne();
 
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
+
     return contract;
   }
+
 
   async updateStatus(id: number, status: string, userId: number) {
     const validStatuses = ["draft", "pending", "signed", "cancelled"];
@@ -247,6 +268,9 @@ export class ContractService {
     });
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
 
+    if (contract.createdBy.id !== userId) {
+      throw new Error("Bạn không có quyền cập nhật trạng thái hợp đồng này");
+    }
     contract.status = status as ContractStatus;
     contract.updatedAt = new Date();
     await this.contractRepository.save(contract);

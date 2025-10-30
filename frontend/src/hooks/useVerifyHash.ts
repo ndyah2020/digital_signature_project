@@ -22,8 +22,6 @@ export function useVerifyContractApi(url: string | null | undefined) {
         const response = await api.get(url);
 
         const apiStatus = response.data?.data?.status;
-        console.log(apiStatus)
-        
         if (apiStatus === 'verified' || apiStatus === 'mismatch') {
           setStatus(apiStatus);
         } else {

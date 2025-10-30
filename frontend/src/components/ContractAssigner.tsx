@@ -38,12 +38,10 @@ const ContractAssigner: React.FC<ContractAssignerProps> = ({
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-
     setIsSearching(true);
     setFoundUser(null);
     try {
       const user = await findUserByEmail(email);
-
       if (foundUsers.some((u) => u.id === user.id)) {
         toast({
           title: 'Người dùng đã có trong danh sách',
@@ -81,7 +79,6 @@ const ContractAssigner: React.FC<ContractAssignerProps> = ({
 
   const handleAssign = async () => {
     if (foundUsers.length === 0 || !contract) return;
-
     try {
       await addRecipientMutate({
         contractId: contract.id,

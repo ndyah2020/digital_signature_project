@@ -1,9 +1,11 @@
 import { AppDataSource } from "../config/data_source";
 import { User } from "../entities/User";
+import { Contract } from "../entities/Contract";
+
 import { UpdateUserDTO } from "../dto/user.dto";
 export class UserService {
   private userRepository = AppDataSource.getRepository(User);
-
+  private contractRepository = AppDataSource.getRepository(Contract);
   // lấy tất cả người dùng
   async getAllUsers(): Promise<User[]> {
     return await this.userRepository.find();
@@ -15,14 +17,14 @@ export class UserService {
 
   async getUserByEmail(email: string): Promise<User | null> {
     return await this.userRepository.findOne(
-      { 
-        where: { email }, 
+      {
+        where: { email },
         select: {
           id: true,
           email: true,
           name: true
         }
-      }   
+      }
     );
   }
 

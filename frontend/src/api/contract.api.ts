@@ -43,7 +43,7 @@ type StatusUpdatePayload = { id: number | string; status: string };
 const updateContractStatus = async (payload: StatusUpdatePayload) => {
   const { id, status } = payload;
   const res = await api.patch(`/contracts/${id}/status`, { status });
-  return res.data.data; // Code của bạn trả về res.data.data
+  return res.data.data; 
 };
 
 
@@ -121,7 +121,7 @@ export const useUpdateContractStatus = () => {
       onSuccess: (data) => {
         toast({
           title: "✅ Cập nhật trạng thái thành công!",
-          description: `Hợp đồng đã chuyển sang trạng thái "${data.status}".`, // Giả sử data trả về có status
+          description: `Hợp đồng đã chuyển sang trạng thái "${data.status}".`, 
         });
       },
       onError: (err) => {

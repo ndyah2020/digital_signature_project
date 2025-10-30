@@ -24,9 +24,7 @@ router.get("/:id", authMiddleware, (req, res) => controller.getById(req, res));
 // PATCH /contracts/:id/status → cập nhật trạng thái
 router.get("/verify_contracts/:id", authMiddleware,(req, res) => controller.verifyContracts(req, res));
 
-router.get("/view/:id", authMiddleware, (req, res) =>
-  controller.view(req, res)
-);
+router.get("/view/:id", authMiddleware, (req, res) =>controller.view(req, res));
 
 
 router.patch("/:id/status", authMiddleware, (req, res) =>

@@ -9,6 +9,7 @@ import useFetch from '../hooks/useFetch'
 import { useVerifyContractApi, VerificationStatus } from '../hooks/useVerifyHash';
 import { useViewContract } from '../api/contract.api';
 import { SignatureType } from '../type/signature';
+import { AssignerType } from '../type/assigner';
 
 
 const VerificationStatusBadge: React.FC<{ status: VerificationStatus; errorMessage: string | null }> = ({ status, errorMessage }) => {
@@ -57,7 +58,6 @@ const ContractDetail: React.FC = () => {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const { mutate: viewContract, isLoading } = useViewContract();
 
-
   const handleSignContract = async (signature: string) => {
     console.log("Đã ký (giả lập):", signature);
     toast({
@@ -67,7 +67,7 @@ const ContractDetail: React.FC = () => {
     });
     setIsSignatureDialogOpen(false);
   };
-
+  console.log(contract)
   if (loading) {
     return <div className="flex h-full items-center justify-center p-10">
       <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
@@ -127,10 +127,6 @@ const ContractDetail: React.FC = () => {
       });
     }
   };
-
-  const handleAssignParty = () => {
-
-  }
 
   const getStatusBadge = () => {
     switch (contract.status) {
@@ -349,38 +345,45 @@ const ContractDetail: React.FC = () => {
               </h3>
             </div>
             <div className="border-t border-gray-200">
-              {contract.signatures && contract.signatures.length > 0 ? (
+              {contract.recipientLinks && contract.recipientLinks.length > 0 ? (
                 <ul className="divide-y divide-gray-200">
-                  {contract.signatures.map((party: SignatureType) => (
-                    <li
-                      key={party.id}
-                      className="border-b border-gray-200 px-4 py-4 last:border-b-0 sm:px-6"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {party.user.name}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {party.user.email}
-                          </p>
-                        </div>
+                  {contract.recipientLinks.map((recipient) => {
+                    const hasSigned = contract.signatures.some(
+                      (sig) =>
+                        sig.user.id === recipient.user.id && sig.isValid === true
+                    );
+                    return (
+                      <li
+                        key={recipient.user.id}
+                        className="border-b border-gray-200 px-4 py-4 last:border-b-0 sm:px-6"
+                      >
+                        <div className="flex items-center justify-between">
+                          {/* Thông tin người được gán */}
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {recipient.user.name}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {recipient.user.email}
+                            </p>
+                          </div>
 
-                        {party.isValid &&
-                          contract.signatures.some((sig: SignatureType) => sig.user.id === party.id) ? (
-                          <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-0.5 text-xs font-medium text-green-800">
-                            <CheckCircle className="mr-1 h-3 w-3" />
-                            Đã ký
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-yellow-100 px-3 py-0.5 text-xs font-medium text-yellow-800">
-                            <Clock className="mr-1 h-3 w-3" />
-                            Chờ ký
-                          </span>
-                        )}
-                      </div>
-                    </li>
-                  ))}
+                          {/* Trạng thái ký */}
+                          {hasSigned ? (
+                            <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-0.5 text-xs font-medium text-green-800">
+                              <CheckCircle className="mr-1 h-3 w-3" />
+                              Đã ký
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-yellow-100 px-3 py-0.5 text-xs font-medium text-yellow-800">
+                              <Clock className="mr-1 h-3 w-3" />
+                              Chờ ký
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <div className="px-4 py-5 text-center text-sm text-gray-500 sm:px-6">
@@ -388,6 +391,7 @@ const ContractDetail: React.FC = () => {
                 </div>
               )}
             </div>
+
           </div>
         </div>
         <div className="col-span-1 space-y-6">
@@ -408,7 +412,7 @@ const ContractDetail: React.FC = () => {
                           <p className="text-sm font-medium text-gray-900">
                             {signature.user.name}
                           </p>
-                          
+
                           {signature.isValid ? (
                             <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
                               <CheckCircle className="mr-1 h-3 w-3" />
@@ -420,7 +424,7 @@ const ContractDetail: React.FC = () => {
                               Không hợp lệ
                             </span>
                           )}
-                        </div>        
+                        </div>
                         <p className="text-xs text-gray-500">
                           {formatDate(signature.signedAt)}
                         </p>
