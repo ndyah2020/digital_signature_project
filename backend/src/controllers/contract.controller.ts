@@ -63,16 +63,14 @@ export class ContractController {
         return res.status(400).json({ message: "Thiếu ID của hợp đồng" });
       }
       const result = await this.service.verifyContractIntegrity(parseInt(id));
-      if (result.status === 'error') {
-
+      if (result.status === "error") {
         return res.status(400).json({ message: result.message });
       }
 
       return res.status(200).json({
         message: result.message,
-        data: { status: result.status }
+        data: { status: result.status },
       });
-
     } catch (error: any) {
       return res.status(400).json({ message: error.message });
     }
@@ -81,7 +79,7 @@ export class ContractController {
   async view(req: Request, res: Response) {
     try {
       const userId = (req as any).user.sub;
-      console.log(userId)
+      console.log(userId);
       const id = parseInt(req.params.id);
 
       const stream = await this.service.viewContract(id, userId, res);
@@ -93,7 +91,6 @@ export class ContractController {
       });
     }
   }
-
 
   // [PATCH] /contracts/:id/status  → Cập nhật trạng thái (draft → pending/signed)
   async updateStatus(req: Request, res: Response) {
@@ -119,18 +116,12 @@ export class ContractController {
   async assign(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { recipientIds } = req.body;
+      const { recipientItems } = req.body;
       const user = (req as any).user;
-      if (!Array.isArray(recipientIds) || recipientIds.length === 0) {
-        return res
-          .status(400)
-          .json({ message: "recipientIds phải là mảng id" });
-      }
-
       const updated = await this.service.assignContractToUser(
         parseInt(id),
         user.sub,
-        recipientIds
+        recipientItems
       );
       return res.status(200).json({ message: "Gán thành công", data: updated });
     } catch (error: any) {

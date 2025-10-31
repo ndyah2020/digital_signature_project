@@ -1,6 +1,6 @@
 import axios from "axios";
 import cloudinary from "../config/cloudinary";
-import * as path from 'path';
+import * as path from "path";
 import { AppDataSource } from "../config/data_source";
 import { Contract, ContractStatus } from "../entities/Contract";
 import { AuditLogService } from "../services/auditLog.service";
@@ -8,12 +8,10 @@ import { User, UserRole } from "../entities/User";
 import { ContractRecipient, SignStatus } from "../entities/ContractRecipient";
 import { Response } from "express";
 
-
 const fs = require("fs");
 const crypto = require("crypto");
 
 export class ContractService {
-
   private recipientRepository = AppDataSource.getRepository(ContractRecipient);
   private userRepository = AppDataSource.getRepository(User);
   private contractRepository = AppDataSource.getRepository(Contract);
@@ -23,7 +21,7 @@ export class ContractService {
     file: import("multer").File,
     title: string,
     description: string,
-    createdBy: number,
+    createdBy: number
   ) {
     const extension = path.extname(file.originalname);
     const baseName = path.basename(file.originalname, extension);
@@ -47,7 +45,7 @@ export class ContractService {
     });
     const viewUrl = result.secure_url.replace(
       "/upload/",
-      `/upload/fl_attachment:${finalPublicId.split('.')[0]}/`
+      `/upload/fl_attachment:${finalPublicId.split(".")[0]}/`
     );
 
     fs.unlinkSync(file.path);
@@ -90,7 +88,9 @@ export class ContractService {
     });
   }
 
-  async verifyContractIntegrity(id: number): Promise<{ status: string; message: string }> {
+  async verifyContractIntegrity(
+    id: number
+  ): Promise<{ status: string; message: string }> {
     let contract;
     try {
       contract = await this.contractRepository.findOne({ where: { id } });
@@ -106,22 +106,26 @@ export class ContractService {
       }
 
       const response = await axios.get(fileUrl, {
-        responseType: 'arraybuffer',
+        responseType: "arraybuffer",
       });
 
       const fileBuffer = Buffer.from(response.data);
       const calculatedHash = crypto
-        .createHash('sha256')
+        .createHash("sha256")
         .update(fileBuffer)
-        .digest('hex');
+        .digest("hex");
 
       if (calculatedHash === storedHash) {
-        return { status: 'verified', message: 'File toàn vẹn.' };
+        return { status: "verified", message: "File toàn vẹn." };
       } else {
-        console.warn(`[HASH MISMATCH] Hợp đồng #${id}. Lưu trữ: ${storedHash}, Tính toán: ${calculatedHash}`);
-        return { status: 'mismatch', message: 'Cảnh báo: File không khớp với bản gốc!' };
+        console.warn(
+          `[HASH MISMATCH] Hợp đồng #${id}. Lưu trữ: ${storedHash}, Tính toán: ${calculatedHash}`
+        );
+        return {
+          status: "mismatch",
+          message: "Cảnh báo: File không khớp với bản gốc!",
+        };
       }
-
     } catch (error: any) {
       if (axios.isAxiosError(error) && error.response) {
         const status = error.response.status;
@@ -130,15 +134,22 @@ export class ContractService {
           throw new Error(`404: File không tồn tại trên Cloudinary.`);
         }
         if (status === 401 || status === 403) {
-          let errorBody = 'Lỗi không được phép';
+          let errorBody = "Lỗi không được phép";
           try {
-            const errorDataString = Buffer.from(error.response.data).toString('utf-8');
+            const errorDataString = Buffer.from(error.response.data).toString(
+              "utf-8"
+            );
             const errorJson = JSON.parse(errorDataString);
             errorBody = errorJson.error?.message || errorBody;
-          } catch (e) { }
+          } catch (e) {}
 
-          if (errorBody.includes('untrusted customer') || errorBody.includes('Unauthorized')) {
-            throw new Error(`401: Lỗi Cloudinary: Tài khoản chưa được xác minh (untrusted). Vui lòng thêm thẻ thanh toán.`);
+          if (
+            errorBody.includes("untrusted customer") ||
+            errorBody.includes("Unauthorized")
+          ) {
+            throw new Error(
+              `401: Lỗi Cloudinary: Tài khoản chưa được xác minh (untrusted). Vui lòng thêm thẻ thanh toán.`
+            );
           }
         }
         throw new Error(`500: Lỗi từ Cloudinary: ${error.response.statusText}`);
@@ -238,7 +249,11 @@ export class ContractService {
   async assignContractToUser(
     contractId: number,
     senderId: number,
-    recipientIds: number[]
+    recipientItems: Array<{
+      userId: number;
+      deadlineDays?: number;
+      onExpireAction?: "cancel" | "remove" | "extend";
+    }>
   ) {
     const contract = await this.contractRepository.findOne({
       where: { id: contractId },
@@ -254,17 +269,31 @@ export class ContractService {
         "Chỉ admin hoặc người tạo hợp đồng được phép gán người ký"
       );
     }
+    // Xoá các recipient cũ
     await this.recipientRepository.delete({ contract: { id: contractId } });
 
-    const recipients = recipientIds.map((userId) =>
-      this.recipientRepository.create({
-        contractId: contractId,
-        userId: userId,
-        sign_status: SignStatus.PENDING,
-        signed_at: null,
-      })
+    const recipients = recipientItems.map(
+      ({ userId, deadlineDays, onExpireAction }) => {
+        const recipient: Partial<ContractRecipient> = {
+          contract: { id: contractId } as Contract,
+          user: { id: userId } as User,
+          sign_status: SignStatus.PENDING,
+          signed_at: null,
+          deadline: null,
+          isExpired: false,
+          onExpireAction: (onExpireAction as any) || "remove",
+        };
+        if (typeof deadlineDays === "number" && !isNaN(deadlineDays)) {
+          const day = new Date();
+          day.setDate(day.getDate() + deadlineDays);
+          recipient.deadline = day;
+        }
+        return recipient;
+      }
     );
+
     await this.recipientRepository.save(recipients);
+
     if (contract.status === ContractStatus.DRAFT)
       contract.status = ContractStatus.PENDING;
     contract.updatedAt = new Date();
@@ -272,11 +301,12 @@ export class ContractService {
     await this.auditLogService.createLog(
       senderId,
       "ASSIGN_CONTRACT",
-      `Gán hợp đồng #${contractId} cho người dùng: [${recipientIds.join(", ")}]`
+      `Gán hợp đồng #${contractId} cho người dùng: [${recipientItems
+        .map((r) => r.userId)
+        .join(", ")}]`
     );
     return contract;
   }
-
 
   async updateContractMetadata(
     contractId: number,
@@ -345,4 +375,3 @@ export class ContractService {
     return { success: true };
   }
 }
-

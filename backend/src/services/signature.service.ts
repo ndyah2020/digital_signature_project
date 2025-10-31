@@ -36,7 +36,7 @@ export class SignatureService {
       const user = await userRepo.findOne({ where: { id: userId } });
       if (!user) throw new Error("Người dùng không tồn tại");
 
-      // Kiểm tra quyền
+      // Kiểm tra quyền recipient
       const link = await recipientRepo.findOne({
         where: { contractId, userId },
       });
@@ -48,10 +48,19 @@ export class SignatureService {
       ) {
         throw new Error("Bạn không có quyền ký hợp đồng này");
       }
-
+      // Nếu đã ký rồi
       if (link && link.sign_status === SignStatus.SIGNED)
         throw new Error("Bạn đã ký rồi");
-
+      // Nếu đã expired
+      if (link && link.isExpired) {
+        throw new Error("Thời hạn ký hợp đồng đã hết");
+      }
+      // Nếu có deadline và đã quá hạn
+      if (link && link.deadline && new Date() > new Date(link.deadline)) {
+        link.isExpired = true;
+        await recipientRepo.save(link);
+        throw new Error("Hạn ký hợp đồng đã vượt quá");
+      }
       if (!user.privateKeyEncrypted)
         throw new Error("Không tìm thấy private key");
 
@@ -73,7 +82,7 @@ export class SignatureService {
         if (!okEmail) throw new Error("Mã email OTP không hợp lệ");
       }
 
-      // --- Trước khi ký: xác minh tất cả chữ ký hiện có để đảm bảo file/hash không bị thay đổi ---
+      //  xác minh tất cả chữ ký hiện có để đảm bảo file/hash không bị thay đổi ---
       const currentHash = contract.hash;
       if (!currentHash)
         throw new Error("Hợp đồng chưa có giá trị hash để xác minh");
@@ -150,9 +159,12 @@ export class SignatureService {
       const signatureHash = signatureBuffer.toString("base64");
 
       // Xóa private key khỏi bộ nhớ an toàn
-      const temp = Buffer.from(privateKey, "utf8");
-      temp.fill(0);
-      privateKey = "";
+      try {
+        const tmp = Buffer.from(privateKey, "utf8");
+        tmp.fill(0);
+      } catch (e) {
+        // ignore
+      }
 
       // Immediately wipe privateKey variable
       privateKey = "";
