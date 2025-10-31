@@ -1,3 +1,5 @@
+import { AssignerType } from "./assigner";
+import { UserData } from "./auth";
 import { SignatureType } from "./signature";
 
 export interface ContractType {
@@ -17,15 +19,12 @@ export interface ContractDataType {
   createdBy: {
     id: number,
     name: string,
-    emai: string,
+    email: string,
   };
+  recipientLinks: AssignerType[],
   signatures: SignatureType[];
   createdAt: string;
   updatedAt: string;
-}
-
-export interface ContractVerifyType {
-
 }
 
 export interface ContractUpdateType {

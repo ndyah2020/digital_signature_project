@@ -1,5 +1,5 @@
 export interface User {
-    sub: string;
+    sub: number;
     name: string;
     email: string;
     publicKey?: string;
@@ -25,4 +25,10 @@ export interface RegisterData {
     name: string;
     email: string;
     password: string;
+}
+
+export interface UserData {
+    id: number;
+    name: string;
+    email: string;
 }

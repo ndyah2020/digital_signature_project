@@ -70,10 +70,31 @@ export class ContractService {
     return contract;
   }
 
-  // Lấy tất cả hợp đồng
   async getAllContracts() {
     return await this.contractRepository.find({
       relations: ["createdBy"],
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        file_url: true,
+        hash: true,
+        status: true,
+        createdBy: {
+          email: true,
+        },
+      },
+    });
+  }
+
+  // service
+  async getAllContractsByCreateAndRecipient(userId: number) {
+    return this.contractRepository.find({
+      where: [
+        { createdBy: { id: userId } },
+        { recipientLinks: { user: { id: userId } } },
+      ],
+      relations: ["createdBy", "recipientLinks", "recipientLinks.user"],
       select: {
         id: true,
         title: true,
@@ -157,18 +178,20 @@ export class ContractService {
       throw error;
     }
   }
+
   async viewContract(contractId: number, userId: number, res: Response) {
     const contract = await this.contractRepository.findOne({
       where: { id: contractId },
-      relations: ["createdBy", "signatures", "signatures.user"],
+      relations: ["createdBy", "recipientLinks", "recipientLinks.user"],
     });
-
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
 
-    const isOwner = contract.createdBy.id === userId;
-    const isSigner = contract.signatures.some((s) => s.user.id === userId);
+    const isOwner = contract.createdBy?.id === userId;
+    const isRecipient = contract.recipientLinks.some(
+      (r) => r.user && r.user.id === userId
+    );
 
-    if (!isOwner && !isSigner) {
+    if (!isOwner && !isRecipient) {
       throw new Error("Bạn không có quyền xem hợp đồng này");
     }
 
@@ -177,13 +200,6 @@ export class ContractService {
       throw new Error("Hợp đồng này chưa có file đính kèm");
     }
 
-    await this.auditLogService.createLog(
-      userId,
-      "VIEW_CONTRACT",
-      `Xem hợp đồng: ${contract.title}`
-    );
-
-    // Stream file từ Cloudinary
     const response = await axios.get(fileUrl, { responseType: "stream" });
     res.setHeader("Content-Type", "application/pdf");
     response.data.pipe(res);
@@ -192,17 +208,25 @@ export class ContractService {
   async getContractById(id: number) {
     const contract = await this.contractRepository.findOne({
       where: { id },
-      relations: ["createdBy", "signatures", "signatures.user"],
+      relations: [
+        "createdBy",
+        "recipientLinks",
+        "recipientLinks.user",
+        "signatures",
+        "signatures.user",
+      ],
       select: {
         id: true,
         title: true,
         description: true,
+        file_url: true,
         hash: true,
         status: true,
-        fileSize: true,
         fileType: true,
+        fileSize: true,
         createdAt: true,
         createdBy: {
+          id: true,
           name: true,
           email: true,
         },
@@ -217,10 +241,20 @@ export class ContractService {
             email: true,
           },
         },
+        recipientLinks: {
+          sign_status: true,
+          signed_at: true,
+          user: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
 
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
+
     return contract;
   }
 
@@ -235,6 +269,9 @@ export class ContractService {
     });
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
 
+    if (contract.createdBy.id !== userId) {
+      throw new Error("Bạn không có quyền cập nhật trạng thái hợp đồng này");
+    }
     contract.status = status as ContractStatus;
     contract.updatedAt = new Date();
     await this.contractRepository.save(contract);

@@ -1,4 +1,4 @@
-import { api } from "../utils/api"; // Giả sử đây là instance Axios của bạn
+import { api } from "../utils/api";
 import { useToast } from "../components/ui/use-toast";
 import { ContractDataType, ContractType, ContractUpdateType } from "../type/contract.type";
 import { useMutation } from "../hooks/useMutation";
@@ -43,7 +43,7 @@ type StatusUpdatePayload = { id: number | string; status: string };
 const updateContractStatus = async (payload: StatusUpdatePayload) => {
   const { id, status } = payload;
   const res = await api.patch(`/contracts/${id}/status`, { status });
-  return res.data.data; // Code của bạn trả về res.data.data
+  return res.data.data; 
 };
 
 
@@ -54,12 +54,23 @@ const viewContract = async (id: number): Promise<Blob> => {
   return res.data;
 };
 
+interface AssignPartyVariables {
+  contractId: number;
+  recipientIds: number[];
+}
 
+const assignPartyMutation = async ({ contractId, recipientIds }: AssignPartyVariables) => {
+  const response = await api.post(
+    `/contracts/${contractId}/assign`,
+    { recipientIds }
+  );
+  return response.data;
+};
 
 export const useCreateContract = () => {
   const { toast } = useToast();
   return useMutation<ContractDataType, ContractType>(
-    createContract, 
+    createContract,
     {
       onSuccess: () => {
         toast({
@@ -78,15 +89,12 @@ export const useCreateContract = () => {
   );
 };
 
-/**
- * Hook: Cập nhật hợp đồng
- */
+
 export const useUpdateContract = () => {
   const { toast } = useToast();
   return useMutation<ContractDataType, ContractUpdateType>(
-    updateContract, // Hàm API
+    updateContract, 
     {
-      // Options
       onSuccess: () => {
         toast({
           title: "✅ Cập nhật hợp đồng thành công!",
@@ -107,13 +115,13 @@ export const useUpdateContract = () => {
 
 export const useUpdateContractStatus = () => {
   const { toast } = useToast();
-  return useMutation( 
-    updateContractStatus, 
+  return useMutation(
+    updateContractStatus,
     {
       onSuccess: (data) => {
         toast({
           title: "✅ Cập nhật trạng thái thành công!",
-          description: `Hợp đồng đã chuyển sang trạng thái "${data.status}".`, // Giả sử data trả về có status
+          description: `Hợp đồng đã chuyển sang trạng thái "${data.status}".`, 
         });
       },
       onError: (err) => {
@@ -130,7 +138,7 @@ export const useUpdateContractStatus = () => {
 
 export const useViewContract = () => {
   return useMutation<Blob, number>(
-    viewContract, 
+    viewContract,
     {
       onSuccess: (data, id) => {
         console.log(`Tải blob thành công cho ID: ${id}`);
@@ -142,3 +150,24 @@ export const useViewContract = () => {
   );
 };
 
+export const useAddRecipient = () => {
+  const { toast } = useToast();
+  return useMutation(assignPartyMutation,
+    {
+      onSuccess: (_, variables) => {
+        const { contractId, recipientIds } = variables;
+        toast({
+          title: 'Đã thêm người dùng vào hợp đồng',
+          description: `Đã thêm ${recipientIds.length} người dùng vào hợp đồng ${contractId}.`,
+        });
+      },
+      onError: (err: any) => {
+        toast({
+          title: 'Lỗi thêm người dùng vào hợp đồng',
+          description: err.message || 'Không thể thêm người dùng vào hợp đồng.',
+          variant: 'destructive',
+        });
+      },
+    }
+  )
+}
