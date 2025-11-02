@@ -11,6 +11,7 @@ import { useViewContract } from '../api/contract.api';
 import { SignatureType } from '../type/signature';
 import { useCheckSigner, useSignature } from '../api/singnature.api';
 import { useAuth } from '../hooks/useAuth';
+import { ContractSummary } from '../type/assigner';
 
 
 const VerificationStatusBadge: React.FC<{ status: VerificationStatus; errorMessage: string | null }> = ({ status, errorMessage }) => {
@@ -58,14 +59,19 @@ const ContractDetail: React.FC = () => {
   const { status: verificationStatus, errorMessage: verificationError } = useVerifyContractApi(`/contracts/verify_contracts/${contract?.id}`);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const { mutate: viewContract, isLoading } = useViewContract();
-  const {mutateAsync: checkSigner} = useCheckSigner();
-  const {user} = useAuth();
+  const { mutateAsync: checkSigner } = useCheckSigner();
+  const { user } = useAuth();
+  const { data: contractAssigner, loading: isLoadingAssigne, error: erroAssigne, refetch: refetchAssigner } = useFetch<ContractSummary[]>(
+    "/contracts/get-create-recipient"
+  );
+
+
   // const {mutate: signContract, isLoading: isLoadingSign} = useSignature();
 
   const handleSignContract = async (signature: string) => {
 
   };
-  
+
   if (loading) {
     return <div className="flex h-full items-center justify-center p-10">
       <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
@@ -128,10 +134,15 @@ const ContractDetail: React.FC = () => {
 
   const handleCheck = async () => {
     const userId = user?.sub;
-    if (!userId) return;
+    const userName = user?.email;
+    console.log(userName);
+    if (!userId || !userName) return;
+
     const contractId = contract.id;
+    const contractName = contract.title;
+    console.log("heheh")
     try {
-      const isValid = await checkSigner({ userId, contractId });
+      const isValid = await checkSigner({contractId, contractName});
       if (isValid) {
         setIsSignatureDialogOpen(true);
       }
@@ -141,7 +152,6 @@ const ContractDetail: React.FC = () => {
   };
 
 
-  
   const getStatusBadge = () => {
     switch (contract.status) {
       case 'draft':
@@ -359,56 +369,81 @@ const ContractDetail: React.FC = () => {
               </h3>
             </div>
             <div className="border-t border-gray-200">
-              {contract.recipientLinks && contract.recipientLinks.length > 0 ? (
-                <ul className="divide-y divide-gray-200">
-                  {contract.recipientLinks.map((recipient) => {
-                    const hasSigned = contract.signatures.some(
-                      (sig) =>
-                        sig.user.id === recipient.user.id && sig.isValid === true
-                    );
-                    return (
-                      <li
-                        key={recipient.user.id}
-                        className="border-b border-gray-200 px-4 py-4 last:border-b-0 sm:px-6"
-                      >
-                        <div className="flex items-center justify-between">
-                          {/* Thông tin người được gán */}
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {recipient.user.name}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {recipient.user.email}
-                            </p>
-                          </div>
+              {contractAssigner && contractAssigner.length > 0 ? (
+                contractAssigner.map((contract) => (
+                  <div key={contract.id} className="border-b border-gray-300">
+                    {contract.recipientLinks && contract.recipientLinks.length > 0 ? (
+                      <ul className="divide-y divide-gray-200">
+                        {contract.recipientLinks.map((recipient) => (
+                          <li
+                            key={recipient.user.id}
+                            className="border-b border-gray-200 px-4 py-4 last:border-b-0 sm:px-6"
+                          >
+                            <div className="flex items-center justify-between">
+                              {/* Thông tin người được gán */}
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {recipient.user.name}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {recipient.user.email}
+                                </p>
+                              </div>
 
-                          {/* Trạng thái ký */}
-                          {hasSigned ? (
-                            <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-0.5 text-xs font-medium text-green-800">
-                              <CheckCircle className="mr-1 h-3 w-3" />
-                              Đã ký
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-full bg-yellow-100 px-3 py-0.5 text-xs font-medium text-yellow-800">
-                              <Clock className="mr-1 h-3 w-3" />
-                              Chờ ký
-                            </span>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                              <div className="text-right">
+                                {recipient.sign_status === "signed" ? (
+                                  <>
+                                    <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-0.5 text-xs font-medium text-green-800">
+                                      <CheckCircle className="mr-1 h-3 w-3" />
+                                      Đã ký
+                                    </span>
+                                    {recipient.signed_at && (
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        Ký lúc:{" "}
+                                        {new Date(recipient.signed_at).toLocaleString("vi-VN")}
+                                      </p>
+                                    )}
+                                  </>
+                                ) : recipient.isExpired ? (
+                                  <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-0.5 text-xs font-medium text-red-800">
+                                    Hết hạn
+                                  </span>
+                                ) : (
+                                  <>
+                                    <span className="inline-flex items-center rounded-full bg-yellow-100 px-3 py-0.5 text-xs font-medium text-yellow-800">
+                                      <Clock className="mr-1 h-3 w-3" />
+                                      Chờ ký
+                                    </span>
+                                    {recipient.deadline && (
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        Hạn ký:{" "}
+                                        {new Date(recipient.deadline).toLocaleDateString("vi-VN")}
+                                      </p>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="px-4 py-5 text-center text-sm text-gray-500 sm:px-6">
+                        Chưa có bên nào tham gia.
+                      </div>
+                    )}
+                  </div>
+                ))
               ) : (
                 <div className="px-4 py-5 text-center text-sm text-gray-500 sm:px-6">
-                  Chưa có bên nào tham gia.
+                  Không có hợp đồng nào.
                 </div>
               )}
             </div>
 
           </div>
         </div>
-        <div className="col-span-1 space-y-6">
+        {/* <div className="col-span-1 space-y-6">
           <div className="overflow-hidden rounded-lg bg-white shadow">
             <div className="px-4 py-5 sm:px-6">
               <h3 className="text-lg font-medium leading-6 text-gray-900">
@@ -460,7 +495,7 @@ const ContractDetail: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+        </div> */}
 
       </div>
       <SignatureDialog

@@ -2,6 +2,7 @@ import { api } from "../utils/api";
 import { useToast } from "../components/ui/use-toast";
 import { ContractDataType, ContractType, ContractUpdateType } from "../type/contract.type";
 import { useMutation } from "../hooks/useMutation";
+import { AssignPartyVariables } from "../type/assigner";
 
 
 const createContract = async (payload: ContractType): Promise<ContractDataType> => {
@@ -54,19 +55,14 @@ const viewContract = async (id: number): Promise<Blob> => {
   return res.data;
 };
 
-interface AssignPartyVariables {
-  contractId: number;
-  recipientIds: number[];
-}
 
-const assignPartyMutation = async ({ contractId, recipientIds }: AssignPartyVariables) => {
-  const response = await api.post(
-    `/contracts/${contractId}/assign`,
-    { recipientIds }
-  );
+const assignPartyMutation = async ({ contractId, senderId, recipientItems }: AssignPartyVariables) => {
+  const response = await api.post(`/contracts/${contractId}/assign`, {
+    senderId,
+    recipientItems,
+  });
   return response.data;
 };
-
 export const useCreateContract = () => {
   const { toast } = useToast();
   return useMutation<ContractDataType, ContractType>(
@@ -152,22 +148,21 @@ export const useViewContract = () => {
 
 export const useAddRecipient = () => {
   const { toast } = useToast();
-  return useMutation(assignPartyMutation,
-    {
-      onSuccess: (_, variables) => {
-        const { contractId, recipientIds } = variables;
-        toast({
-          title: 'Đã thêm người dùng vào hợp đồng',
-          description: `Đã thêm ${recipientIds.length} người dùng vào hợp đồng ${contractId}.`,
-        });
-      },
-      onError: (err: any) => {
-        toast({
-          title: 'Lỗi thêm người dùng vào hợp đồng',
-          description: err.message || 'Không thể thêm người dùng vào hợp đồng.',
-          variant: 'destructive',
-        });
-      },
-    }
-  )
-}
+
+  return useMutation(assignPartyMutation, {
+    onSuccess: (_, variables) => {
+      toast({
+        title: 'Đã thêm người dùng vào hợp đồng',
+        description: `Đã gán ${variables.recipientItems.length} người dùng vào hợp đồng #${variables.contractId}.`,
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Lỗi thêm người dùng vào hợp đồng',
+        description: err.message || 'Không thể thêm người dùng vào hợp đồng.',
+        variant: 'destructive',
+      });
+    },
+  });
+};
+

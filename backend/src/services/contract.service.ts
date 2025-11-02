@@ -98,13 +98,22 @@ export class ContractService {
       select: {
         id: true,
         title: true,
-        description: true,
-        file_url: true,
-        hash: true,
-        status: true,
         createdBy: {
+          id: true,
           email: true,
         },
+        recipientLinks: {
+          user: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+          sign_status: true,
+          signed_at: true,
+          deadline: true,
+          isExpired: true,
+        }
       },
     });
   }

@@ -22,7 +22,10 @@ const ContractAssigner: React.FC<ContractAssignerProps> = ({
 }) => {
   const [email, setEmail] = useState('');
   const [foundUser, setFoundUser] = useState<UserData | null>(null);
-  const [foundUsers, setFoundUsers] = useState<UserData[]>([]); 
+  const [foundUsers, setFoundUsers] = useState<
+    Array<UserData & { deadlineDays?: number; onExpireAction?: "cancel" | "remove" | "extend" }>
+  >([]);
+
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
   const { mutate: addRecipientMutate, isLoading: isAssigning } = useAddRecipient();
@@ -68,10 +71,14 @@ const ContractAssigner: React.FC<ContractAssignerProps> = ({
 
   const handleAddToList = () => {
     if (!foundUser) return;
-    setFoundUsers((prev) => [...prev, foundUser]);
+    setFoundUsers((prev) => [
+      ...prev,
+      { ...foundUser, deadlineDays: 7, onExpireAction: "remove" }, // mặc định
+    ]);
     setFoundUser(null);
     setEmail('');
   };
+
 
   const handleRemoveUser = (id: number) => {
     setFoundUsers((prev) => prev.filter((u) => u.id !== id));
@@ -82,12 +89,16 @@ const ContractAssigner: React.FC<ContractAssignerProps> = ({
     try {
       await addRecipientMutate({
         contractId: contract.id,
-        recipientIds: foundUsers.map((u) => u.id),
+        senderId: contract.createdBy.id,
+        recipientItems: foundUsers.map((u) => ({
+          userId: u.id,
+          deadlineDays: u.deadlineDays,
+          onExpireAction: u.onExpireAction,
+        })),
       });
       toast({
         title: 'Gán thành công!',
         description: `Đã gán ${foundUsers.length} người vào hợp đồng.`,
-        variant: 'default',
       });
       onAssignSuccess();
       onClose();
@@ -99,6 +110,7 @@ const ContractAssigner: React.FC<ContractAssignerProps> = ({
       });
     }
   };
+
 
   if (!isOpen || !contract) return null;
 
@@ -134,11 +146,10 @@ const ContractAssigner: React.FC<ContractAssignerProps> = ({
               <button
                 type="submit"
                 disabled={isSearching || !email}
-                className={`inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium ${
-                  isSearching
-                    ? 'cursor-not-allowed bg-gray-200 text-gray-500'
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                }`}
+                className={`inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium ${isSearching
+                  ? 'cursor-not-allowed bg-gray-200 text-gray-500'
+                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
               >
                 {isSearching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
               </button>
@@ -165,23 +176,56 @@ const ContractAssigner: React.FC<ContractAssignerProps> = ({
           <div className="mt-6 rounded-md border border-green-200 bg-green-50 p-4">
             <h3 className="text-sm font-medium text-green-800 mb-2">Danh sách người dùng đã chọn</h3>
             <ul className="space-y-2 max-h-40 overflow-y-auto">
-              {foundUsers.map((user) => (
-                <li
-                  key={user.id}
-                  className="flex items-center justify-between rounded-md bg-white px-3 py-2 shadow-sm"
-                >
-                  <div>
-                    <p className="text-sm font-semibold">{user.name}</p>
-                    <p className="text-xs text-gray-500">{user.email}</p>
+              {foundUsers.map((user, index) => (
+                <li key={user.id} className="flex flex-col gap-2 rounded-md bg-white px-3 py-2 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">{user.name}</p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveUser(user.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleRemoveUser(user.id)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+
+                  {/* Deadline input */}
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <label>Thời hạn (ngày):</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={user.deadlineDays || ''}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || undefined;
+                        setFoundUsers(prev =>
+                          prev.map((u, i) => (i === index ? { ...u, deadlineDays: value } : u))
+                        );
+                      }}
+                      className="w-16 rounded-md border px-2 py-1 text-sm"
+                    />
+
+                    <label>Hết hạn:</label>
+                    <select
+                      value={user.onExpireAction}
+                      onChange={(e) => {
+                        const value = e.target.value as "cancel" | "remove" | "extend";
+                        setFoundUsers(prev =>
+                          prev.map((u, i) => (i === index ? { ...u, onExpireAction: value } : u))
+                        );
+                      }}
+                      className="rounded-md border px-2 py-1 text-sm"
+                    >
+                      <option value="remove">Xóa</option>
+                      <option value="cancel">Hủy</option>
+                      <option value="extend">Gia hạn</option>
+                    </select>
+                  </div>
                 </li>
               ))}
+
             </ul>
           </div>
         )}
@@ -199,9 +243,8 @@ const ContractAssigner: React.FC<ContractAssignerProps> = ({
             type="button"
             onClick={handleAssign}
             disabled={isAssigning || foundUsers.length === 0}
-            className={`inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white ${
-              isAssigning ? 'cursor-not-allowed opacity-70' : 'hover:bg-indigo-700'
-            }`}
+            className={`inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white ${isAssigning ? 'cursor-not-allowed opacity-70' : 'hover:bg-indigo-700'
+              }`}
           >
             {isAssigning ? (
               <Loader2 size={16} className="mr-2 animate-spin" />

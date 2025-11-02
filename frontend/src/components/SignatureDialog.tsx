@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { X, Key, Lock, Clock } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/ui/use-toast';
-import { signDocument } from '../utils/crypto';
 import { useSendEmailOtp } from '../api/otpEmail';
 
 interface SignatureDialogProps {
@@ -15,8 +14,8 @@ interface SignatureDialogProps {
 const SignatureDialog: React.FC<SignatureDialogProps> = ({
   isOpen,
   onClose,
-  onSign,
-  contractHash
+  // onSign,
+  // contractHash
 }) => {
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
@@ -25,7 +24,7 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
   const [countdown, setCountdown] = useState(300); // 5 phút = 300 giây
   const [isResending, setIsResending] = useState(false);
 
-  const { user, decryptPrivateKey } = useAuth();
+  const { decryptPrivateKey } = useAuth();
   const { mutate: sendEmailOtp } = useSendEmailOtp();
 
   const { toast } = useToast();
@@ -48,43 +47,43 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
   };
 
 
-const handleSubmitPassword = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!password) {
-    toast({
-      title: "Lỗi",
-      description: "Vui lòng nhập mật khẩu để ký hợp đồng.",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  setIsProcessing(true);
-  try {
-    const privateKeyValid = await decryptPrivateKey(password);
-    if (!privateKeyValid) {
+  const handleSubmitPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password) {
       toast({
         title: "Lỗi",
-        description: "Mật khẩu không chính xác.",
+        description: "Vui lòng nhập mật khẩu để ký hợp đồng.",
         variant: "destructive",
       });
       return;
     }
-    // truyền một biến giả vào đề không lỗi
-    await sendEmailOtp({}); 
-    setStep("otp");
-    setCountdown(300); 
-  } catch (error) {
-    console.error("Error sending OTP:", error);
-    toast({
-      title: "Lỗi gửi OTP",
-      description: "Không thể gửi mã xác thực. Vui lòng thử lại sau.",
-      variant: "destructive",
-    });
-  } finally {
-    setIsProcessing(false);
-  }
-};
+
+    setIsProcessing(true);
+    try {
+      const privateKeyValid = await decryptPrivateKey(password);
+      if (!privateKeyValid) {
+        toast({
+          title: "Lỗi",
+          description: "Mật khẩu không chính xác.",
+          variant: "destructive",
+        });
+        return;
+      }
+      // truyền một biến giả vào đề không lỗi
+      await sendEmailOtp({});
+      setStep("otp");
+      setCountdown(300);
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      toast({
+        title: "Lỗi gửi OTP",
+        description: "Không thể gửi mã xác thực. Vui lòng thử lại sau.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
 
   // const handleSubmitOtp = async (e: React.FormEvent) => {
@@ -136,13 +135,25 @@ const handleSubmitPassword = async (e: React.FormEvent) => {
   const handleResendOtp = async () => {
     setIsResending(true);
     try {
-     
-    } catch {
-      toast({ title: 'Lỗi', description: 'Không thể gửi lại OTP.', variant: 'destructive' });
+      await sendEmailOtp({});
+      setCountdown(300);
+      toast({
+        title: "Đã gửi lại OTP",
+        description: "Mã xác thực mới đã được gửi đến email của bạn.",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Lỗi khi gửi lại OTP:", error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể gửi lại mã OTP. Vui lòng thử lại sau.",
+        variant: "destructive",
+      });
     } finally {
       setIsResending(false);
     }
   };
+
 
   if (!isOpen) return null;
 
@@ -216,7 +227,7 @@ const handleSubmitPassword = async (e: React.FormEvent) => {
           </form>
         ) : (
           // BƯỚC 2: NHẬP OTP  onSubmit={handleSubmitOtp}
-          <form> 
+          <form>
             <p className="mb-4 text-sm text-gray-700">
               Nhập mã OTP đã được gửi tới địa chỉ email của bạn để xác nhận việc ký hợp đồng.
             </p>

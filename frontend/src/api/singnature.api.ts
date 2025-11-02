@@ -4,8 +4,8 @@ import { SignPayload, SignResponse } from "../type/signature";
 import { api } from "../utils/api";
 
 interface CheckSignerVars {
-  userId: number;
   contractId: number;
+  contractName: string;
 }
 const checkSigner = async (data: CheckSignerVars) : Promise<boolean> => {
   const contractId = data.contractId;
@@ -41,13 +41,12 @@ export const useSignature = () => {
 
 export const useCheckSigner = () => {
   const { toast } = useToast();
-
   return useMutation<boolean, CheckSignerVars>(checkSigner, {
     onSuccess: (data, variables) => {
       if (data) {
         toast({
           title: "Xác thực thành công",
-          description: `Người dùng ${variables.userId} hợp lệ cho hợp đồng #${variables.contractId}.`,
+          description: `Bạn hợp lệ cho hợp đồng #${variables.contractName}.`,
         });
       } else {
         toast({
