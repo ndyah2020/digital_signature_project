@@ -84,22 +84,7 @@ const ContractEditor: React.FC<ContractEditorProps> = ({
               rows={3}
             />
           </div>
-
-          {/* <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Trạng thái
-            </label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
-            >
-              <option value="draft">Bản nháp</option>
-              <option value="signed">Đã ký</option>
-              <option value="completed">Hoàn thành</option>
-            </select>
-          </div> */}
-
+          
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Tệp đính kèm mới (nếu có)

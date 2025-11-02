@@ -26,6 +26,21 @@ export class UserController {
     }
   }
 
+  async checkPassword(req: Request, res: Response) {
+    try {
+      const {password} = req.body;
+      const userId = req.user.email;
+      const result = await this.userService.checkPassword(userId,password);
+      if(!result) {
+        return res.status(400).json({access: false})
+      }
+
+      return res.status(200).json({access: true})
+    }catch (error: any) {
+      return res.status(500).json({ message: error.message });
+    }
+  }
+
   // [PUT] /users/:id
   async updateUser(req: Request, res: Response) {
     try {

@@ -9,7 +9,8 @@ import useFetch from '../hooks/useFetch'
 import { useVerifyContractApi, VerificationStatus } from '../hooks/useVerifyHash';
 import { useViewContract } from '../api/contract.api';
 import { SignatureType } from '../type/signature';
-import { AssignerType } from '../type/assigner';
+import { useCheckSigner, useSignature } from '../api/singnature.api';
+import { useAuth } from '../hooks/useAuth';
 
 
 const VerificationStatusBadge: React.FC<{ status: VerificationStatus; errorMessage: string | null }> = ({ status, errorMessage }) => {
@@ -57,17 +58,14 @@ const ContractDetail: React.FC = () => {
   const { status: verificationStatus, errorMessage: verificationError } = useVerifyContractApi(`/contracts/verify_contracts/${contract?.id}`);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const { mutate: viewContract, isLoading } = useViewContract();
+  const {mutateAsync: checkSigner} = useCheckSigner();
+  const {user} = useAuth();
+  // const {mutate: signContract, isLoading: isLoadingSign} = useSignature();
 
   const handleSignContract = async (signature: string) => {
-    console.log("Đã ký (giả lập):", signature);
-    toast({
-      title: "Đã ký (Giả lập)",
-      description: "Hợp đồng đã được ký thành công.",
-      variant: "default",
-    });
-    setIsSignatureDialogOpen(false);
+
   };
-  console.log(contract)
+  
   if (loading) {
     return <div className="flex h-full items-center justify-center p-10">
       <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
@@ -128,6 +126,22 @@ const ContractDetail: React.FC = () => {
     }
   };
 
+  const handleCheck = async () => {
+    const userId = user?.sub;
+    if (!userId) return;
+    const contractId = contract.id;
+    try {
+      const isValid = await checkSigner({ userId, contractId });
+      if (isValid) {
+        setIsSignatureDialogOpen(true);
+      }
+    } catch (error) {
+      console.error("Lỗi khi xác thực người ký:", error);
+    }
+  };
+
+
+  
   const getStatusBadge = () => {
     switch (contract.status) {
       case 'draft':
@@ -203,7 +217,7 @@ const ContractDetail: React.FC = () => {
 
 
           <button
-            onClick={() => setIsSignatureDialogOpen(true)}
+            onClick={() => handleCheck()}
             className="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
           >
             <FileText className="mr-2 h-4 w-4" />

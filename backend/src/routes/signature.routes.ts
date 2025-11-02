@@ -26,4 +26,8 @@ router.get("/", authMiddleware, (req, res) =>
   controller.getAllSignatures(req, res)
 );
 
+router.post("/check-signer", authMiddleware, (req, res) => 
+  controller.checkSigner(req, res)
+);
+
 export default router;

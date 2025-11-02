@@ -9,3 +9,16 @@ export interface SignatureType {
     email: string,
   },
 }
+
+export interface SignPayload {
+  contractId: number;
+  password: string;
+  totpToken?: string;
+  emailOtp?: string;
+}
+
+export interface SignResponse {
+  message: string;
+  signatureId?: number;
+  isValid?: boolean;
+}

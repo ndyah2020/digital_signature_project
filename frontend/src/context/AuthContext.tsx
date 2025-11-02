@@ -3,6 +3,7 @@ import { api } from "../utils/api";
 import { User } from "../type/auth";
 import { jwtDecode } from "jwt-decode";
 
+
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -10,6 +11,7 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  decryptPrivateKey: (password: string) => Promise<boolean>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,6 +74,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res.data;
   };
 
+  const decryptPrivateKey = async (password: string): Promise<boolean> => {
+  try {
+    const res = await api.post("/users/check-password",  {password});
+    return res.data.access; 
+    
+  } catch (error) {
+    console.error("Lỗi khi xác thực mật khẩu:", error);
+    return false;
+  }
+};``
+
+
+
   const value: AuthContextType = {
     user,
     isAuthenticated,
@@ -79,6 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     register,
     logout,
+    decryptPrivateKey,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

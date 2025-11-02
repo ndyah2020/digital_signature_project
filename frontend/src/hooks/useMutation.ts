@@ -36,11 +36,16 @@ export function useMutation<TData = unknown, TVariables = unknown>(
     [mutationFn, options]
   );
 
+  const mutateAsync = useCallback(
+    (variables: TVariables) => mutate(variables),
+    [mutate]
+  );
+
   const reset = useCallback(() => {
     setData(null);
     setError(null);
     setIsLoading(false);
   }, []);
 
-  return { mutate, data, isLoading, error, reset };
+  return { mutate, mutateAsync, data, isLoading, error, reset };
 }

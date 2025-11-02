@@ -100,14 +100,12 @@ export class TwoFAService {
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const hash = crypto.createHash("sha256").update(code).digest("hex");
-    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 phút
+    const expiresAt = Date.now() + 5 * 60 * 1000; 
 
     this.otpTempStore.set(user.email, { codeHash: hash, expiresAt });
 
     const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_SMTP_HOST,
-      port: Number(process.env.EMAIL_SMTP_PORT) || 587,
-      secure: false,
+      service: "gmail",
       auth: {
         user: process.env.EMAIL_SMTP_USER,
         pass: process.env.EMAIL_SMTP_PASS,
@@ -121,7 +119,7 @@ export class TwoFAService {
       text: `Mã OTP của bạn là: ${code}. Mã này hết hạn sau 5 phút.`,
     });
 
-    return { message: "Đã gửi OTP qua email" };
+    return {access: true , message: "Đã gửi OTP qua email" };
   }
 
   async verifyEmailOtp(userId: number, code: string) {

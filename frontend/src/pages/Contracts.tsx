@@ -21,7 +21,7 @@ import { useAuth } from '../hooks/useAuth';
 
 const Contracts: React.FC = () => {
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-  const { data: contracts, loading, error, refetch } = useFetch<ContractDataType[]>("/contracts/get-create-recipient");
+  const { data: contracts, loading, refetch } = useFetch<ContractDataType[]>("/contracts/get-create-recipient");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAssignerOpen, setisAssignerOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractDataType | null>(null);

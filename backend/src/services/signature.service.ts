@@ -11,6 +11,7 @@ export class SignatureService {
   private signatureRepository = AppDataSource.getRepository(Signature);
   private userRepository = AppDataSource.getRepository(User);
   private contractRepository = AppDataSource.getRepository(Contract);
+  private recipientRepository = AppDataSource.getRepository(ContractRecipient);
   private auditService = new AuditLogService();
   private twoFAService = new TwoFAService();
   // ký hợp đồng
@@ -213,8 +214,7 @@ export class SignatureService {
       await this.auditService.createLog(
         userId,
         "SIGN_CONTRACT",
-        `Người dùng ${user.name} ký hợp đồng ID ${contractId} (${
-          isValid ? "Hợp lệ" : "Không hợp lệ"
+        `Người dùng ${user.name} ký hợp đồng ID ${contractId} (${isValid ? "Hợp lệ" : "Không hợp lệ"
         })`
       );
       return {
@@ -259,8 +259,7 @@ export class SignatureService {
     await this.auditService.createLog(
       user.id,
       "VERIFY_SIGNATURE",
-      `Xác minh chữ ký ID ${signature.id} cho hợp đồng ${contract.id} → ${
-        isValid ? "Hợp lệ" : "Không hợp lệ"
+      `Xác minh chữ ký ID ${signature.id} cho hợp đồng ${contract.id} → ${isValid ? "Hợp lệ" : "Không hợp lệ"
       }`
     );
 
@@ -283,5 +282,17 @@ export class SignatureService {
     return await this.signatureRepository.find({
       relations: ["user", "contract"],
     });
+  }
+
+  async checkSigner(userId: number, contractId: number) {
+    const recipients = await this.recipientRepository.find({
+      where: { contractId },
+    });
+    if (!recipients) {
+      throw new Error("Không tìm thấy hợp đồng");
+    }
+    const access = recipients.some(recipient => recipient.userId === userId);
+    console.log(access);
+    return access;
   }
 }

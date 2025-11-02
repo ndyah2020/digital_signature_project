@@ -1,6 +1,7 @@
 import { AppDataSource } from "../config/data_source";
 import { User } from "../entities/User";
 import { Contract } from "../entities/Contract";
+const bcrypt = require("bcrypt");
 
 import { UpdateUserDTO } from "../dto/user.dto";
 export class UserService {
@@ -26,6 +27,13 @@ export class UserService {
         }
       }
     );
+  }
+
+  async checkPassword(email: string, password: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) throw new Error("Sai email hoặc mật khẩu");
+    const match = await bcrypt.compare(password, user.passwordHash);
+    return match
   }
 
   // update thông tin người dùng

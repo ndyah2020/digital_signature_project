@@ -15,4 +15,5 @@ router.put("/:id", authMiddleware, (req, res) =>
 
 router.get("/:email", authMiddleware, (req, res) => controller.getUserByEmail(req, res))
 
+router.post("/check-password", authMiddleware, (req, res) => controller.checkPassword(req, res))
 export default router;
