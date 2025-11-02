@@ -8,6 +8,8 @@ CREATE TABLE users (
     public_key TEXT,
     role TEXT NOT NULL,
     private_key_encrypted TEXT,
+    totp_secret TEXT NULL,
+    is_totp_enabled BOOLEAN DEFAULT FALSE
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -30,12 +32,16 @@ CREATE TABLE contracts (
 CREATE TABLE contract_recipients (
   contract_id INT NOT NULL,
   user_id INT NOT NULL,
-  sign_status VARCHAR(20) DEFAULT 'pending' CHECK (sign_status IN ('pending', 'signed', 'failed')),
+  sign_status VARCHAR(20) DEFAULT 'pending' CHECK (sign_status IN ('pending', 'signed', 'failed', 'expired', 'removed')),
   signed_at TIMESTAMP NULL,
+  deadline TIMESTAMP NULL,
+  isExpired BOOLEAN DEFAULT FALSE,
+  onExpireAction VARCHAR(30) DEFAULT NULL CHECK (onExpireAction IN ('cancel', 'remove', 'extend')),
   PRIMARY KEY (contract_id, user_id),
   CONSTRAINT fk_cr_contract FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_cr_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
 -- chữ ký số của người dùng trên hợp đồng
 CREATE TABLE signatures (
     id SERIAL PRIMARY KEY,
@@ -54,6 +60,7 @@ CREATE TABLE audit_logs (
     details TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 -- Thêm khóa ngoại sau khi tạo bảng
 -- 🔹 contracts.created_by → users.id
 ALTER TABLE contracts
@@ -87,9 +94,7 @@ REFERENCES users(id)
 ON DELETE SET NULL
 ON UPDATE CASCADE;
 
-ALTER TABLE users
-ADD COLUMN totp_secret TEXT NULL,
-ADD COLUMN is_totp_enabled BOOLEAN DEFAULT FALSE;
+
 -- Tạo index hỗ trợ tìm kiếm nhanh
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_contracts_status ON contracts(status);

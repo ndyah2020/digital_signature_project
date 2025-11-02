@@ -6,8 +6,6 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToMany,
-  ManyToMany,
-  JoinTable,
 } from "typeorm";
 import { User } from "./User";
 import { Signature } from "./Signature";

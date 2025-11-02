@@ -1,6 +1,6 @@
 import axios from "axios";
 import cloudinary from "../config/cloudinary";
-import * as path from 'path';
+import * as path from "path";
 import { AppDataSource } from "../config/data_source";
 import { Contract, ContractStatus } from "../entities/Contract";
 import { AuditLogService } from "../services/auditLog.service";
@@ -8,12 +8,10 @@ import { User, UserRole } from "../entities/User";
 import { ContractRecipient, SignStatus } from "../entities/ContractRecipient";
 import { Response } from "express";
 
-
 const fs = require("fs");
 const crypto = require("crypto");
 
 export class ContractService {
-
   private recipientRepository = AppDataSource.getRepository(ContractRecipient);
   private userRepository = AppDataSource.getRepository(User);
   private contractRepository = AppDataSource.getRepository(Contract);
@@ -23,7 +21,7 @@ export class ContractService {
     file: import("multer").File,
     title: string,
     description: string,
-    createdBy: number,
+    createdBy: number
   ) {
     const extension = path.extname(file.originalname);
     const baseName = path.basename(file.originalname, extension);
@@ -47,7 +45,7 @@ export class ContractService {
     });
     const viewUrl = result.secure_url.replace(
       "/upload/",
-      `/upload/fl_attachment:${finalPublicId.split('.')[0]}/`
+      `/upload/fl_attachment:${finalPublicId.split(".")[0]}/`
     );
 
     fs.unlinkSync(file.path);
@@ -71,7 +69,6 @@ export class ContractService {
     );
     return contract;
   }
-
 
   async getAllContracts() {
     return await this.contractRepository.find({
@@ -112,8 +109,9 @@ export class ContractService {
     });
   }
 
-
-  async verifyContractIntegrity(id: number): Promise<{ status: string; message: string }> {
+  async verifyContractIntegrity(
+    id: number
+  ): Promise<{ status: string; message: string }> {
     let contract;
     try {
       contract = await this.contractRepository.findOne({ where: { id } });
@@ -129,22 +127,26 @@ export class ContractService {
       }
 
       const response = await axios.get(fileUrl, {
-        responseType: 'arraybuffer',
+        responseType: "arraybuffer",
       });
 
       const fileBuffer = Buffer.from(response.data);
       const calculatedHash = crypto
-        .createHash('sha256')
+        .createHash("sha256")
         .update(fileBuffer)
-        .digest('hex');
+        .digest("hex");
 
       if (calculatedHash === storedHash) {
-        return { status: 'verified', message: 'File toàn vẹn.' };
+        return { status: "verified", message: "File toàn vẹn." };
       } else {
-        console.warn(`[HASH MISMATCH] Hợp đồng #${id}. Lưu trữ: ${storedHash}, Tính toán: ${calculatedHash}`);
-        return { status: 'mismatch', message: 'Cảnh báo: File không khớp với bản gốc!' };
+        console.warn(
+          `[HASH MISMATCH] Hợp đồng #${id}. Lưu trữ: ${storedHash}, Tính toán: ${calculatedHash}`
+        );
+        return {
+          status: "mismatch",
+          message: "Cảnh báo: File không khớp với bản gốc!",
+        };
       }
-
     } catch (error: any) {
       if (axios.isAxiosError(error) && error.response) {
         const status = error.response.status;
@@ -153,15 +155,22 @@ export class ContractService {
           throw new Error(`404: File không tồn tại trên Cloudinary.`);
         }
         if (status === 401 || status === 403) {
-          let errorBody = 'Lỗi không được phép';
+          let errorBody = "Lỗi không được phép";
           try {
-            const errorDataString = Buffer.from(error.response.data).toString('utf-8');
+            const errorDataString = Buffer.from(error.response.data).toString(
+              "utf-8"
+            );
             const errorJson = JSON.parse(errorDataString);
             errorBody = errorJson.error?.message || errorBody;
-          } catch (e) { }
+          } catch (e) {}
 
-          if (errorBody.includes('untrusted customer') || errorBody.includes('Unauthorized')) {
-            throw new Error(`401: Lỗi Cloudinary: Tài khoản chưa được xác minh (untrusted). Vui lòng thêm thẻ thanh toán.`);
+          if (
+            errorBody.includes("untrusted customer") ||
+            errorBody.includes("Unauthorized")
+          ) {
+            throw new Error(
+              `401: Lỗi Cloudinary: Tài khoản chưa được xác minh (untrusted). Vui lòng thêm thẻ thanh toán.`
+            );
           }
         }
         throw new Error(`500: Lỗi từ Cloudinary: ${error.response.statusText}`);
@@ -173,11 +182,7 @@ export class ContractService {
   async viewContract(contractId: number, userId: number, res: Response) {
     const contract = await this.contractRepository.findOne({
       where: { id: contractId },
-      relations: [
-        "createdBy",
-        "recipientLinks",
-        "recipientLinks.user",
-      ],
+      relations: ["createdBy", "recipientLinks", "recipientLinks.user"],
     });
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
 
@@ -200,62 +205,58 @@ export class ContractService {
     response.data.pipe(res);
   }
 
-
-
   async getContractById(id: number) {
-    const contract = await this.contractRepository
-      .createQueryBuilder("contract")
-      // Liên kết bảng
-      .leftJoinAndSelect("contract.createdBy", "createdBy")
-      .leftJoinAndSelect("contract.signatures", "signatures")
-      .leftJoinAndSelect("signatures.user", "signatureUser")
-      .leftJoinAndSelect("contract.recipientLinks", "recipientLinks")
-      .leftJoinAndSelect("recipientLinks.user", "recipientUser")
-
-      // Điều kiện
-      .where("contract.id = :id", { id })
-
-      // Các trường cần lấy
-      .select([
-        "contract.id",
-        "contract.title",
-        "contract.description",
-        "contract.hash",
-        "contract.status",
-        "contract.file_url",
-        "contract.fileType",
-        "contract.fileSize",
-        "contract.createdAt",
-        "contract.updatedAt",
-
-        // Người tạo hợp đồng
-        "createdBy.id",
-        "createdBy.name",
-        "createdBy.email",
-
-        // Chữ ký
-        "signatures.id",
-        "signatures.signatureHash",
-        "signatures.isValid",
-        "signatures.signedAt",
-        "signatureUser.id",
-        "signatureUser.name",
-        "signatureUser.email",
-
-
-        "recipientLinks.sign_status",
-        "recipientLinks.signed_at",
-        "recipientUser.id",
-        "recipientUser.name",
-        "recipientUser.email",
-      ])
-      .getOne();
+    const contract = await this.contractRepository.findOne({
+      where: { id },
+      relations: [
+        "createdBy",
+        "recipientLinks",
+        "recipientLinks.user",
+        "signatures",
+        "signatures.user",
+      ],
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        file_url: true,
+        hash: true,
+        status: true,
+        fileType: true,
+        fileSize: true,
+        createdAt: true,
+        createdBy: {
+          id: true,
+          name: true,
+          email: true,
+        },
+        signatures: {
+          id: true,
+          signatureHash: true,
+          isValid: true,
+          signedAt: true,
+          user: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        recipientLinks: {
+          sign_status: true,
+          signed_at: true,
+          user: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
 
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
 
     return contract;
   }
-
 
   async updateStatus(id: number, status: string, userId: number) {
     const validStatuses = ["draft", "pending", "signed", "cancelled"];
@@ -285,7 +286,11 @@ export class ContractService {
   async assignContractToUser(
     contractId: number,
     senderId: number,
-    recipientIds: number[]
+    recipientItems: Array<{
+      userId: number;
+      deadlineDays?: number;
+      onExpireAction?: "cancel" | "remove" | "extend";
+    }>
   ) {
     const contract = await this.contractRepository.findOne({
       where: { id: contractId },
@@ -301,17 +306,31 @@ export class ContractService {
         "Chỉ admin hoặc người tạo hợp đồng được phép gán người ký"
       );
     }
+    // Xoá các recipient cũ
     await this.recipientRepository.delete({ contract: { id: contractId } });
 
-    const recipients = recipientIds.map((userId) =>
-      this.recipientRepository.create({
-        contractId: contractId,
-        userId: userId,
-        sign_status: SignStatus.PENDING,
-        signed_at: null,
-      })
+    const recipients = recipientItems.map(
+      ({ userId, deadlineDays, onExpireAction }) => {
+        const recipient: Partial<ContractRecipient> = {
+          contract: { id: contractId } as Contract,
+          user: { id: userId } as User,
+          sign_status: SignStatus.PENDING,
+          signed_at: null,
+          deadline: null,
+          isExpired: false,
+          onExpireAction: (onExpireAction as any) || "remove",
+        };
+        if (typeof deadlineDays === "number" && !isNaN(deadlineDays)) {
+          const day = new Date();
+          day.setDate(day.getDate() + deadlineDays);
+          recipient.deadline = day;
+        }
+        return recipient;
+      }
     );
+
     await this.recipientRepository.save(recipients);
+
     if (contract.status === ContractStatus.DRAFT)
       contract.status = ContractStatus.PENDING;
     contract.updatedAt = new Date();
@@ -319,11 +338,12 @@ export class ContractService {
     await this.auditLogService.createLog(
       senderId,
       "ASSIGN_CONTRACT",
-      `Gán hợp đồng #${contractId} cho người dùng: [${recipientIds.join(", ")}]`
+      `Gán hợp đồng #${contractId} cho người dùng: [${recipientItems
+        .map((r) => r.userId)
+        .join(", ")}]`
     );
     return contract;
   }
-
 
   async updateContractMetadata(
     contractId: number,
@@ -392,4 +412,3 @@ export class ContractService {
     return { success: true };
   }
 }
-
