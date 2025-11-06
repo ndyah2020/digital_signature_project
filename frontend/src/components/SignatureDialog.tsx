@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Key, Lock, Clock } from 'lucide-react';
+import { X, Key, Lock, Clock, Code } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/ui/use-toast';
-import { useSendEmailOtp } from '../api/otpEmail';
+import { useSendEmailOtp, useVerifyEmailOtp } from '../api/otpEmail';
 
 interface SignatureDialogProps {
   isOpen: boolean;
@@ -19,14 +19,13 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
 }) => {
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'password' | 'otp'>('password');
-  const [countdown, setCountdown] = useState(300); // 5 phút = 300 giây
+  const [countdown, setCountdown] = useState(300); 
   const [isResending, setIsResending] = useState(false);
 
   const { decryptPrivateKey } = useAuth();
-  const { mutate: sendEmailOtp } = useSendEmailOtp();
-
+  const { mutate: sendEmailOtp, isLoading: isSendEmailOtp } = useSendEmailOtp();
+  const { mutateAsync: verifyEmailOtp, isLoading: isVerifyEmailOtp} = useVerifyEmailOtp();
   const { toast } = useToast();
 
 
@@ -47,7 +46,7 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
   };
 
 
-  const handleSubmitPassword = async (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password) {
       toast({
@@ -58,97 +57,78 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
       return;
     }
 
-    setIsProcessing(true);
     try {
       const privateKeyValid = await decryptPrivateKey(password);
       if (!privateKeyValid) {
         toast({
-          title: "Lỗi",
+          title: "Xác thực mật khẩu",
           description: "Mật khẩu không chính xác.",
           variant: "destructive",
         });
         return;
       }
-      // truyền một biến giả vào đề không lỗi
-      await sendEmailOtp({});
-      setStep("otp");
-      setCountdown(300);
+
+      await handleSendOtp();
     } catch (error) {
-      console.error("Error sending OTP:", error);
-      toast({
-        title: "Lỗi gửi OTP",
-        description: "Không thể gửi mã xác thực. Vui lòng thử lại sau.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
+      console.error("Lỗi khi xác thực mật khẩu:", error);
     }
   };
 
 
-  // const handleSubmitOtp = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   if (!otp) {
-  //     toast({
-  //       title: 'Thiếu mã OTP',
-  //       description: 'Vui lòng nhập mã OTP được gửi qua email.',
-  //       variant: 'destructive'
-  //     });
-  //     return;
-  //   }
+  const handleSendOtp = async () => {
+    try {
+      await sendEmailOtp({}); 
+      setStep("otp");
+      setCountdown(300);
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+    }
+  };
 
-  //   setIsProcessing(true);
-  //   try {
-  //     // Xác thực OTP với server
-  //     const res = await fetch('http://localhost:3001/api/verify-otp', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ userId: user?.sub, code: otp })
-  //     });
 
-  //     const data = await res.json();
-  //     if (!res.ok) throw new Error(data.message || 'OTP không hợp lệ');
+  const handleSubmitOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp) {
+      return;
+    }
+    try {
+      const access = await verifyEmailOtp(otp);
+      if(!access.success) {
+        toast({
+          title: 'Mã OTP không chính xác',
+          description: 'Vui lòng kiểm tra lại OTP lại trong email',
+          variant: 'destructive'
+        });
+        return;
+      }
 
-  //     // Khi OTP hợp lệ, tiến hành ký
-  //     const privateKey = await decryptPrivateKey(password);
-  //     const signature = await signDocument(contractHash, privateKey);
-  //     onSign(signature);
-  //     toast({ title: 'Ký hợp đồng thành công', description: 'Hợp đồng đã được ký xác nhận.' });
+      // Khi OTP hợp lệ, tiến hành ký
 
-  //     // Đóng dialog & reset
-  //     setPassword('');
-  //     setOtp('');
-  //     setStep('password');
-  //     onClose();
+      
+      // const privateKey = await decryptPrivateKey(password);
+      
+      // const signature = await signDocument(contractHash, privateKey);
+      // onSign(signature);
+      // toast({ title: 'Ký hợp đồng thành công', description: 'Hợp đồng đã được ký xác nhận.' });
 
-  //   } catch (error: any) {
-  //     toast({
-  //       title: 'Lỗi xác thực OTP',
-  //       description: error.message || 'OTP không hợp lệ hoặc đã hết hạn.',
-  //       variant: 'destructive'
-  //     });
-  //   } finally {
-  //     setIsProcessing(false);
-  //   }
-  // };
+      setPassword('');
+      setOtp('');
+      setStep('password');
+      onClose();
 
+    } catch (error: any) {
+      console.log(error)
+    } 
+  };
+
+  
   const handleResendOtp = async () => {
     setIsResending(true);
     try {
       await sendEmailOtp({});
       setCountdown(300);
-      toast({
-        title: "Đã gửi lại OTP",
-        description: "Mã xác thực mới đã được gửi đến email của bạn.",
-        variant: "default",
-      });
     } catch (error) {
       console.error("Lỗi khi gửi lại OTP:", error);
-      toast({
-        title: "Lỗi",
-        description: "Không thể gửi lại mã OTP. Vui lòng thử lại sau.",
-        variant: "destructive",
-      });
     } finally {
       setIsResending(false);
     }
@@ -174,7 +154,7 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
 
         {step === 'password' ? (
           // BƯỚC 1: NHẬP MẬT KHẨU
-          <form onSubmit={handleSubmitPassword}>
+          <form onSubmit={handlePasswordSubmit}>
             <div className="mb-6 rounded-lg bg-blue-50 p-4 text-sm text-blue-700">
               <div className="flex">
                 <Key className="mr-2 h-5 w-5 flex-shrink-0" />
@@ -218,16 +198,16 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={isProcessing}
+                disabled={isSendEmailOtp}
                 className="inline-flex items-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-75"
               >
-                {isProcessing ? 'Đang xử lý...' : 'Tiếp tục'}
+                {isSendEmailOtp ? 'Đang xử lý...' : 'Tiếp tục'}
               </button>
             </div>
           </form>
         ) : (
           // BƯỚC 2: NHẬP OTP  onSubmit={handleSubmitOtp}
-          <form>
+          <form onSubmit={handleSubmitOtp}>
             <p className="mb-4 text-sm text-gray-700">
               Nhập mã OTP đã được gửi tới địa chỉ email của bạn để xác nhận việc ký hợp đồng.
             </p>
@@ -256,7 +236,7 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
               <button
                 type="button"
                 onClick={handleResendOtp}
-                disabled={isResending || countdown > 240} // chỉ cho gửi lại sau 1 phút
+                disabled={isResending || countdown > 240}
                 className="text-indigo-600 hover:underline disabled:text-gray-400"
               >
                 {isResending ? 'Đang gửi...' : 'Gửi lại OTP'}
@@ -276,10 +256,10 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={isProcessing}
+                disabled={isVerifyEmailOtp}     
                 className="inline-flex items-center rounded-md border border-transparent bg-green-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-green-700 disabled:opacity-75"
               >
-                {isProcessing ? 'Đang xác nhận...' : 'Xác nhận ký'}
+                {isVerifyEmailOtp ? 'Đang xác nhận...' : 'Xác nhận ký'}
               </button>
             </div>
           </form>

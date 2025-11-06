@@ -2,13 +2,13 @@ import { useToast } from "../components/ui/use-toast";
 import { useMutation } from "../hooks/useMutation";
 import { api } from "../utils/api";
 
-interface EmailResponts {success: boolean, message: string,}
-const sendEmailOtp = async (): Promise<EmailResponts> => {
+interface Responts {success: boolean, message: string,}
+const sendEmailOtp = async (): Promise<Responts> => {
     const res = await api.post("/2fa/request-email-otp");
-    return res.data.message;
+    return res.data;
 };
-const verifyEmailOtp = async (code: number): Promise<string> => {
-    const res = await api.post("/2fa/verify-email-otp", code);
+const verifyEmailOtp = async (code: string): Promise<Responts> => {
+    const res = await api.post("/2fa/verify-email-otp", {code});
     return res.data;
 }
 
@@ -16,7 +16,7 @@ const verifyEmailOtp = async (code: number): Promise<string> => {
 export const useSendEmailOtp = () => {
     const { toast } = useToast();
 
-    return useMutation<EmailResponts>(sendEmailOtp, {
+    return useMutation<Responts>(sendEmailOtp, {
         onSuccess: (data) => {
             console.log("Đã gửi mã OTP:", data);
             toast({
@@ -39,16 +39,12 @@ export const useSendEmailOtp = () => {
 
 export const useVerifyEmailOtp = () => {
     const { toast } = useToast();
-    return useMutation<string, number>(
-        verifyEmailOtp,
-        {
+    return useMutation<Responts, string>(verifyEmailOtp, {
             onSuccess: (data) => {
-                console.log(
-                    `Đã gửi mã OTP`
-                );
+                console.log(data?.message || "Gửi thành công");
                 toast({
-                    title: `${data}`,
-                    description: "Xác thực otp thành công",
+                    title: "xác thực OTP",
+                    description: data?.message || `Xác thực otp thành công`,
                 });
             },
             onError: (error) => {
@@ -57,8 +53,8 @@ export const useVerifyEmailOtp = () => {
                     error.message
                 );
                 toast({
-                    title: "Lỗi xác thực OTP",
-                    description: "Lỗi xác thực OTP",
+                    title: "Xác thực OTP thất bại",
+                    description: "Mã OTP không hợp lệ",
                 });
             },
         }

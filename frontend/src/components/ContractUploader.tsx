@@ -9,7 +9,6 @@ interface ContractUploaderProps {
   isCreating: boolean;
   onClose: () => void;
   onUpload: (contractData: any) => void;
-
 }
 
 const ContractUploader: React.FC<ContractUploaderProps> = ({

@@ -134,6 +134,6 @@ export class TwoFAService {
     if (hash !== entry.codeHash) throw new Error("Mã OTP sai");
 
     this.otpTempStore.delete(user.email);
-    return { message: "Xác minh OTP thành công" };
+    return { message: "Xác minh OTP thành công", success: true};
   }
 }
