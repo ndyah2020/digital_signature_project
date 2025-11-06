@@ -3,12 +3,14 @@ import { useMutation } from "../hooks/useMutation";
 import { api } from "../utils/api";
 
 interface Responts {success: boolean, message: string,}
-const sendEmailOtp = async (): Promise<Responts> => {
-    const res = await api.post("/2fa/request-email-otp");
+const sendEmailOtp = async (contractId: number): Promise<Responts> => {
+    const res = await api.post("/2fa/request-email-otp", {contractId});
     return res.data;
 };
-const verifyEmailOtp = async (code: string): Promise<Responts> => {
-    const res = await api.post("/2fa/verify-email-otp", {code});
+
+interface RequestOTP {code: string, contractId: number}
+const verifyEmailOtp = async (data: RequestOTP): Promise<Responts> => {
+    const res = await api.post("/2fa/verify-email-otp", data);
     return res.data;
 }
 
@@ -16,7 +18,7 @@ const verifyEmailOtp = async (code: string): Promise<Responts> => {
 export const useSendEmailOtp = () => {
     const { toast } = useToast();
 
-    return useMutation<Responts>(sendEmailOtp, {
+    return useMutation<Responts, number>(sendEmailOtp, {
         onSuccess: (data) => {
             console.log("Đã gửi mã OTP:", data);
             toast({
@@ -39,11 +41,11 @@ export const useSendEmailOtp = () => {
 
 export const useVerifyEmailOtp = () => {
     const { toast } = useToast();
-    return useMutation<Responts, string>(verifyEmailOtp, {
+    return useMutation<Responts, RequestOTP>(verifyEmailOtp, {
             onSuccess: (data) => {
                 console.log(data?.message || "Gửi thành công");
                 toast({
-                    title: "xác thực OTP",
+                    title: "Xác thực OTP",
                     description: data?.message || `Xác thực otp thành công`,
                 });
             },

@@ -3,19 +3,20 @@ import { X, Key, Lock, Clock, Code } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/ui/use-toast';
 import { useSendEmailOtp, useVerifyEmailOtp } from '../api/otpEmail';
+import { useSignature } from '../api/singnature.api';
 
 interface SignatureDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSign: (signature: string) => void;
-  contractHash: string;
+  onsign: () => void;
+  contractId: number;
 }
 
 const SignatureDialog: React.FC<SignatureDialogProps> = ({
   isOpen,
   onClose,
-  // onSign,
-  // contractHash
+  onsign,
+  contractId
 }) => {
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
@@ -23,9 +24,10 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
   const [countdown, setCountdown] = useState(300); 
   const [isResending, setIsResending] = useState(false);
 
-  const { decryptPrivateKey } = useAuth();
+  const { decryptPrivateKey, user } = useAuth();
   const { mutate: sendEmailOtp, isLoading: isSendEmailOtp } = useSendEmailOtp();
   const { mutateAsync: verifyEmailOtp, isLoading: isVerifyEmailOtp} = useVerifyEmailOtp();
+  const {mutateAsync: signDocument} = useSignature();
   const { toast } = useToast();
 
 
@@ -77,7 +79,7 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
 
   const handleSendOtp = async () => {
     try {
-      await sendEmailOtp({}); 
+      await sendEmailOtp(contractId); 
       setStep("otp");
       setCountdown(300);
     } catch (error) {
@@ -92,7 +94,8 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
       return;
     }
     try {
-      const access = await verifyEmailOtp(otp);
+      const code = otp;
+      const access = await verifyEmailOtp({code, contractId});
       if(!access.success) {
         toast({
           title: 'Mã OTP không chính xác',
@@ -101,16 +104,12 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
         });
         return;
       }
-
       // Khi OTP hợp lệ, tiến hành ký
-
-      
-      // const privateKey = await decryptPrivateKey(password);
-      
-      // const signature = await signDocument(contractHash, privateKey);
-      // onSign(signature);
-      // toast({ title: 'Ký hợp đồng thành công', description: 'Hợp đồng đã được ký xác nhận.' });
-
+      const isSign = await signDocument({contractId,password});
+      if(!isSign.isValid) {
+        onsign()
+        return
+      }
       setPassword('');
       setOtp('');
       setStep('password');
@@ -121,11 +120,11 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
     } 
   };
 
-  
+
   const handleResendOtp = async () => {
     setIsResending(true);
     try {
-      await sendEmailOtp({});
+      await sendEmailOtp(contractId);
       setCountdown(300);
     } catch (error) {
       console.error("Lỗi khi gửi lại OTP:", error);

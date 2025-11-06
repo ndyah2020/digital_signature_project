@@ -9,9 +9,24 @@ CREATE TABLE users (
     role TEXT NOT NULL,
     private_key_encrypted TEXT,
     totp_secret TEXT NULL,
-    is_totp_enabled BOOLEAN DEFAULT FALSE
+    is_totp_enabled BOOLEAN DEFAULT FALSE 
+    -- vẫn giữ lại 2 trường này cho trường hợp quên mật khẩu
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- bảng này dùng để kiểm tra rằng user đã xác mình otp chưa, do tách logic xác minh và ký riêng ra
+CREATE TABLE pending_signs (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    contract_id INT NOT NULL,
+    otp_hash TEXT NOT NULL,
+    otp_expires_at TIMESTAMP NOT NULL,
+    is_verified BOOLEAN DEFAULT FALSE,
+    verified_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_pending_signs_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pending_signs_contract FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
 );
 
 -- hợp đồng hoặc tài liệu cần ký

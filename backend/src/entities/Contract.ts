@@ -10,6 +10,7 @@ import {
 import { User } from "./User";
 import { Signature } from "./Signature";
 import { ContractRecipient } from "./ContractRecipient";
+import { PendingSign } from "./PendingSign";
 
 export enum ContractStatus {
   DRAFT = "draft",
@@ -67,4 +68,8 @@ export class Contract {
 
   @OneToMany(() => ContractRecipient, (cr) => cr.contract)
   recipientLinks: ContractRecipient[];
+
+  @OneToMany(() => PendingSign, (pending) => pending.contract)
+  pendingSigns: PendingSign[];
+
 }

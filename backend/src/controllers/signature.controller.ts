@@ -8,31 +8,16 @@ export class SignatureController {
   async signContract(req: Request, res: Response) {
     try {
       const userId = (req as any).user.sub; 
-      const {
-        contractId,
-        password,
-        totpToken, 
-        emailOtp, 
-      } = req.body as {
+
+      const { contractId, password} = req.body as {
         contractId: number;
         password: string;
-        totpToken?: string;
-        emailOtp?: string;
       };
 
-      // --- Validate input ---
       if (!contractId || !password) {
         return res
           .status(400)
           .json({ message: "Thiếu contractId hoặc password" });
-      }
-
-      // Nếu user có bật TOTP mà client không gửi mã
-      const user = (req as any).user;
-      if (user?.isTotpEnabled && !totpToken) {
-        return res.status(400).json({
-          message: "Tài khoản này đã bật 2FA, vui lòng nhập mã TOTP.",
-        });
       }
 
       // --- Gọi service ---
@@ -40,8 +25,6 @@ export class SignatureController {
         contractId,
         userId,
         password,
-        totpToken || "", // tránh undefined
-        emailOtp || ""
       );
 
       return res.status(201).json({
@@ -49,6 +32,7 @@ export class SignatureController {
         signatureId: result.signatureId,
         isValid: result.isValid,
       });
+      
     } catch (error: any) {
       console.error("Lỗi khi ký hợp đồng:", error);
       return res

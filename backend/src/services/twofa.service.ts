@@ -2,15 +2,13 @@ const speakeasy = require("speakeasy");
 const QRCode = require("qrcode");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
+import { PendingSign } from "../entities/PendingSign";
 import { AppDataSource } from "../config/data_source";
 import { User } from "../entities/User";
 
 export class TwoFAService {
   private userRepo = AppDataSource.getRepository(User);
-  private otpTempStore = new Map<
-    string,
-    { codeHash: string; expiresAt: number }
-  >();
+  private pendingRepo = AppDataSource.getRepository(PendingSign);
 
   // Mã hoá secret bằng pepper
   private encryptWithPepper(plaintext: string): string {
@@ -94,15 +92,28 @@ export class TwoFAService {
   }
 
   // Gửi email OTP
-  async sendEmailOtp(userId: number) {
+  async sendEmailOtp(userId: number, contractId: number) {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new Error("User không tồn tại");
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const hash = crypto.createHash("sha256").update(code).digest("hex");
-    const expiresAt = Date.now() + 5 * 60 * 1000; 
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); 
 
-    this.otpTempStore.set(user.email, { codeHash: hash, expiresAt });
+    // Xóa bản ghi cũ nếu có
+    await this.pendingRepo.delete({
+      user: { id: userId },
+      contract: { id: contractId },
+    });
+
+    // Lưu vào bảng pending_signs
+    const pending = this.pendingRepo.create({
+      user: { id: userId },
+      contract: { id: contractId },
+      otpHash: hash,
+      otpExpiresAt: expiresAt,
+    });
+    await this.pendingRepo.save(pending);
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -111,29 +122,33 @@ export class TwoFAService {
         pass: process.env.EMAIL_SMTP_PASS,
       },
     });
-
     await transporter.sendMail({
       from: process.env.FROM_EMAIL,
       to: user.email,
       subject: "Mã OTP xác thực ký hợp đồng",
-      text: `Mã OTP của bạn là: ${code}. Mã này hết hạn sau 5 phút.`,
+      text: `Mã OTP của bạn là: ${code}. Mã này sẽ hết hạn sau 5 phút.`,
     });
 
-    return {access: true , message: "Đã gửi OTP qua email" };
+    return { access: true, message: "Đã gửi OTP qua email" };
   }
 
-  async verifyEmailOtp(userId: number, code: string) {
-    const user = await this.userRepo.findOne({ where: { id: userId } });
-    if (!user) throw new Error("User không tồn tại");
+  async verifyEmailOtp(userId: number, contractId: number, code: string) {
+    const pending = await this.pendingRepo.findOne({
+      where: { user: { id: userId }, contract: { id: contractId } },
+      relations: ["user", "contract"],
+    });
 
-    const entry = this.otpTempStore.get(user.email);
-    if (!entry) throw new Error("Chưa yêu cầu OTP");
-    if (Date.now() > entry.expiresAt) throw new Error("OTP đã hết hạn");
+    if (!pending) throw new Error("Không tìm thấy yêu cầu ký đang chờ");
+    if (pending.isVerified) throw new Error("OTP đã được xác minh trước đó");
+    if (new Date() > pending.otpExpiresAt) throw new Error("OTP đã hết hạn");
 
     const hash = crypto.createHash("sha256").update(code).digest("hex");
-    if (hash !== entry.codeHash) throw new Error("Mã OTP sai");
+    if (hash !== pending.otpHash) throw new Error("Mã OTP không hợp lệ");
 
-    this.otpTempStore.delete(user.email);
-    return { message: "Xác minh OTP thành công", success: true};
+    pending.isVerified = true;
+    pending.verifiedAt = new Date();
+    await this.pendingRepo.save(pending);
+
+    return { success: true, message: "Xác minh OTP thành công" };
   }
 }

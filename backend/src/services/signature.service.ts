@@ -4,29 +4,26 @@ import { Signature } from "../entities/Signature";
 import { User, UserRole } from "../entities/User";
 import { AuditLogService } from "../services/auditLog.service";
 import { ContractRecipient, SignStatus } from "../entities/ContractRecipient";
-import { TwoFAService } from "../services/twofa.service";
-const speakeasy = require("speakeasy");
+import { PendingSign } from "../entities/PendingSign";
+
 const crypto = require("crypto");
 export class SignatureService {
   private signatureRepository = AppDataSource.getRepository(Signature);
-  private userRepository = AppDataSource.getRepository(User);
-  private contractRepository = AppDataSource.getRepository(Contract);
   private recipientRepository = AppDataSource.getRepository(ContractRecipient);
   private auditService = new AuditLogService();
-  private twoFAService = new TwoFAService();
+  
   // ký hợp đồng
   async signContract(
     contractId: number,
     userId: number,
     password: string,
-    totpToken?: string,
-    emailOtp?: string
   ) {
     return await AppDataSource.manager.transaction(async (tx) => {
       const contractRepo = tx.getRepository(Contract);
       const recipientRepo = tx.getRepository(ContractRecipient);
       const signatureRepo = tx.getRepository(Signature);
       const userRepo = tx.getRepository(User);
+      const pendingSignRepo = tx.getRepository(PendingSign)
 
       const contract = await contractRepo.findOne({
         where: { id: contractId },
@@ -36,6 +33,20 @@ export class SignatureService {
 
       const user = await userRepo.findOne({ where: { id: userId } });
       if (!user) throw new Error("Người dùng không tồn tại");
+
+      const pendingSign = await pendingSignRepo.findOne({
+        where: {
+          user: { id: userId },
+          contract: { id: contractId },
+          isVerified: true, 
+        },
+      });
+
+      if (!pendingSign) {
+        throw new Error(
+          "Xác thực ký không hợp lệ. Bạn cần xác thực OTP qua email trước."
+        );
+      }
 
       // Kiểm tra quyền recipient
       const link = await recipientRepo.findOne({
@@ -64,24 +75,6 @@ export class SignatureService {
       }
       if (!user.privateKeyEncrypted)
         throw new Error("Không tìm thấy private key");
-
-      // --- Xác minh OTP/TOTP ---
-      if (user.isTotpEnabled && user.totpSecret) {
-        if (!totpToken) {
-          throw new Error("Thiếu mã TOTP");
-        }
-        const ok = this.twoFAService.verifyTOTP(user, totpToken);
-        if (!ok) throw new Error("Mã TOTP không hợp lệ");
-      } else {
-        // fallback: kiểm tra emailOtp nếu bạn đã gửi trước đó
-        // implement verifyEmailOtp(userId, emailOtp) theo logic bạn chọn (store OTP temp, expiry, attempts)
-        if (!emailOtp) throw new Error("Yêu cầu mã xác thực qua email");
-        const okEmail = await this.twoFAService.verifyEmailOtp(
-          userId,
-          emailOtp
-        );
-        if (!okEmail) throw new Error("Mã email OTP không hợp lệ");
-      }
 
       //  xác minh tất cả chữ ký hiện có để đảm bảo file/hash không bị thay đổi ---
       const currentHash = contract.hash;
@@ -222,6 +215,8 @@ export class SignatureService {
           `Hợp đồng #${contractId} đã được ký đầy đủ.`
         );
       }
+      // xóa bảng ghi sau khi ký thành công
+      await pendingSignRepo.delete(pendingSign.id);
 
       await this.auditService.createLog(
         userId,
@@ -304,7 +299,6 @@ export class SignatureService {
       throw new Error("Không tìm thấy hợp đồng");
     }
     const access = recipients.some(recipient => recipient.userId === userId);
-    console.log(access);
     return access;
   }
 }

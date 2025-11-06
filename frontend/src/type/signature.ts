@@ -13,8 +13,8 @@ export interface SignatureType {
 export interface SignPayload {
   contractId: number;
   password: string;
-  totpToken?: string;
-  emailOtp?: string;
+  // totpToken?: string;
+  // emailOtp?: string;
 }
 
 export interface SignResponse {

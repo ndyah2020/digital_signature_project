@@ -31,7 +31,8 @@ export class TwoFAController {
   async sendEmailOtp(req: Request, res: Response) {
     try {
       const userId = (req as any).user.sub;
-      const result = await service.sendEmailOtp(userId);
+      const {contractId} = req.body
+      const result = await service.sendEmailOtp(userId, contractId);
       return res.status(200).json(result);
     } catch (error: any) {
       return res.status(400).json({ message: error.message });
@@ -42,8 +43,8 @@ export class TwoFAController {
   async verifyEmailOtp(req: Request, res: Response) {
     try {
       const userId = (req as any).user.sub;
-      const { code } = req.body;
-      const result = await service.verifyEmailOtp(userId, code);
+      const { code, contractId } = req.body;
+      const result = await service.verifyEmailOtp(userId, contractId ,code);
       return res.status(200).json(result);
     } catch (error: any) {
       return res.status(400).json({ message: error.message });

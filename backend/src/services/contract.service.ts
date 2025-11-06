@@ -7,6 +7,7 @@ import { AuditLogService } from "../services/auditLog.service";
 import { User, UserRole } from "../entities/User";
 import { ContractRecipient, SignStatus } from "../entities/ContractRecipient";
 import { Response } from "express";
+import { In, Repository } from "typeorm";
 
 const fs = require("fs");
 const crypto = require("crypto");
@@ -89,11 +90,33 @@ export class ContractService {
 
   // service
   async getAllContractsByCreateAndRecipient(userId: number) {
+    // 1a. Lấy ID hợp đồng user đã TẠO
+    const createdContracts = await this.contractRepository.find({
+      where: { createdBy: { id: userId } },
+      select: { id: true } 
+    });
+    const createdContractIds = createdContracts.map(c => c.id);
+
+    // 1b. Lấy ID hợp đồng user được GÁN
+    const recipientLinks = await this.recipientRepository.find({
+      where: { userId: userId },
+      select: { contractId: true }
+    });
+    const recipientContractIds = recipientLinks.map(r => r.contractId);
+
+    // 1c. Gộp và loại bỏ trùng lặp
+    const allContractIds = [
+      ...new Set([...createdContractIds, ...recipientContractIds])
+    ];
+
+    if (allContractIds.length === 0) {
+      return []; 
+    }
+    
     return this.contractRepository.find({
-      where: [
-        { createdBy: { id: userId } },
-        { recipientLinks: { user: { id: userId } } },
-      ],
+      where: {
+        id: In(allContractIds),
+      },
       relations: ["createdBy", "recipientLinks", "recipientLinks.user"],
       select: {
         id: true,
@@ -115,6 +138,9 @@ export class ContractService {
           isExpired: true,
         }
       },
+      order: {
+        updatedAt: "DESC" 
+      }
     });
   }
 

@@ -10,17 +10,15 @@ interface CheckSignerVars {
 const checkSigner = async (data: CheckSignerVars) : Promise<boolean> => {
   const contractId = data.contractId;
   const res = await api.post("/signatures/check-signer", { contractId });
-  console.log(res)
   return res.data;
 } 
 
 const signContract = async (payload: SignPayload): Promise<SignResponse> => {
-  const res = await api.post("/signature/sign", payload);
+  const res = await api.post("/signatures/sign", payload);
   return res.data;
 };
 
 export const useSignature = () => {
-
   return useMutation<SignResponse, SignPayload>(
     signContract,
     {

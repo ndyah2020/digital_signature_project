@@ -11,6 +11,7 @@ import { Contract } from "./Contract";
 import { Signature } from "./Signature";
 import { AuditLog } from "./AuditLog";
 import { ContractRecipient } from "./ContractRecipient";
+import { PendingSign } from "./PendingSign";
 
 export enum UserRole {
   ADMIN = "admin",
@@ -69,4 +70,8 @@ export class User {
 
   @Column({ name: "is_totp_enabled", type: "boolean", default: false })
   isTotpEnabled: boolean;
+
+  @OneToMany(() => PendingSign, (pending) => pending.user)
+  pendingSigns: PendingSign[];
+
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Clock, CheckCircle, XCircle, Edit, Eye, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileText, Clock, CheckCircle, XCircle, Edit, Eye, Loader2, ShieldCheck, ShieldAlert, ChevronUp, ChevronDown } from 'lucide-react';
 import { useToast } from '../components/ui/use-toast';
 import { formatDate } from '../utils/helpers';
 import SignatureDialog from '../components/SignatureDialog';
@@ -8,10 +8,10 @@ import { ContractDataType } from '../type/contract.type'
 import useFetch from '../hooks/useFetch'
 import { useVerifyContractApi, VerificationStatus } from '../hooks/useVerifyHash';
 import { useViewContract } from '../api/contract.api';
-import { SignatureType } from '../type/signature';
-import { useCheckSigner, useSignature } from '../api/singnature.api';
+import { useCheckSigner } from '../api/singnature.api';
 import { useAuth } from '../hooks/useAuth';
 import { ContractSummary } from '../type/assigner';
+import { SignatureType } from '../type/signature';
 
 
 const VerificationStatusBadge: React.FC<{ status: VerificationStatus; errorMessage: string | null }> = ({ status, errorMessage }) => {
@@ -51,26 +51,23 @@ const VerificationStatusBadge: React.FC<{ status: VerificationStatus; errorMessa
 };
 
 const ContractDetail: React.FC = () => {
+  const [expandedSignatureId, setExpandedSignatureId] = useState<number | null>(null);
   const { id } = useParams<{ id: string }>();
   const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
   const { toast } = useToast();
-  const { data: contract, loading, error } = useFetch<ContractDataType>(`/contracts/${id}`);
+  const { data: contract, loading, error, refetch: refetchContract } = useFetch<ContractDataType>(`/contracts/${id}`);
   const { status: verificationStatus, errorMessage: verificationError } = useVerifyContractApi(`/contracts/verify_contracts/${contract?.id}`);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const { mutate: viewContract, isLoading } = useViewContract();
   const { mutateAsync: checkSigner } = useCheckSigner();
   const { user } = useAuth();
-  const { data: contractAssigner, loading: isLoadingAssigne, error: erroAssigne, refetch: refetchAssigner } = useFetch<ContractSummary[]>(
+  const { data: contractAssigner } = useFetch<ContractSummary[]>(
     "/contracts/get-create-recipient"
   );
 
+  console.log(contractAssigner)
 
-  // const {mutate: signContract, isLoading: isLoadingSign} = useSignature();
-
-  const handleSignContract = async (signature: string) => {
-
-  };
 
   if (loading) {
     return <div className="flex h-full items-center justify-center p-10">
@@ -135,20 +132,32 @@ const ContractDetail: React.FC = () => {
   const handleCheck = async () => {
     const userId = user?.sub;
     const userName = user?.email;
-    console.log(userName);
     if (!userId || !userName) return;
 
     const contractId = contract.id;
     const contractName = contract.title;
-    console.log("heheh")
     try {
-      const isValid = await checkSigner({contractId, contractName});
+      const isValid = await checkSigner({ contractId, contractName });
       if (isValid) {
         setIsSignatureDialogOpen(true);
       }
     } catch (error) {
       console.error("Lỗi khi xác thực người ký:", error);
     }
+  };
+
+   const handleSignatureSuccess = () => {
+    setIsSignatureDialogOpen(false);
+    toast({
+      title: "Ký thành công",
+      description: "Chữ ký của bạn đã được lưu lại.",
+      variant: "default",
+    });
+    refetchContract(); 
+  };
+
+  const handleToggleSignature = (id: number) => {
+    setExpandedSignatureId(prevId => (prevId === id ? null : id));
   };
 
 
@@ -440,69 +449,99 @@ const ContractDetail: React.FC = () => {
                 </div>
               )}
             </div>
+            <div className="col-span-1 space-y-6">
+              <div className="overflow-hidden rounded-lg bg-white shadow">
+                <div className="px-4 py-5 sm:px-6">
+                  <h3 className="text-lg font-medium leading-6 text-gray-900">
+                    Lịch sử chữ ký (Đã xác minh)
+                  </h3>
+                </div>
+
+                <div className="border-t border-gray-200">
+                  {/* Lặp qua contract.signatures từ API chính */}
+                  {contract.signatures && contract.signatures.length > 0 ? (
+                    <ul className="divide-y divide-gray-200">
+                      {contract.signatures.map((signature: SignatureType) => (
+                        <li key={signature.id} className="px-4 py-4 sm:px-6">
+                          <div className="flex flex-col">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium text-gray-900">
+                                {signature.user.name}
+                              </p>
+
+                              {/* Đây là kết quả xác minh TỰ ĐỘNG từ backend
+                            (signature.isValid)
+                          */}
+                              {signature.isValid ? (
+                                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                  <ShieldCheck className="mr-1 h-3 w-3" />
+                                  Hợp lệ
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                                  <ShieldAlert className="mr-1 h-3 w-3" />
+                                  Không hợp lệ
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              {formatDate(signature.signedAt)}
+                            </p>
+
+                            {/* Nút xem chi tiết kỹ thuật
+                            <div className="mt-2">
+                              <button
+                                onClick={() => handleToggleSignature(signature.id)}
+                                className="inline-flex items-center text-xs font-medium text-indigo-600 hover:text-indigo-500"
+                              >
+                                {expandedSignatureId === signature.id ? 'Ẩn chi tiết' : 'Xem chi tiết kỹ thuật'}
+                                {expandedSignatureId === signature.id ?
+                                  <ChevronUp className="ml-1 h-3 w-3" /> :
+                                  <ChevronDown className="ml-1 h-3 w-3" />
+                                }
+                              </button>
+
+                              Thông tin kỹ thuật (chỉ hiển thị khi bấm)
+                              {expandedSignatureId === signature.id && (
+                                <div className="mt-2 space-y-2 rounded bg-gray-50 p-3">
+                                  {/* <div>
+                                    <p className="text-xs font-medium text-gray-500">Thuật toán:</p>
+                                    <p className="text-xs font-mono text-gray-900">
+                                      {signature.signatureAlgo || 'N/A'}
+                                    </p>
+                                  </div> 
+                                  <div>
+                                    <p className="text-xs font-medium text-gray-500">Giá trị chữ ký (Base64):</p>
+                                    <p className="break-all text-xs font-mono text-gray-900">
+                                      {signature.signatureHash}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div> */}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center px-4 py-6 text-center sm:px-6">
+                      <FileText className="mb-2 h-8 w-8 text-gray-400" />
+                      <p className="text-sm text-gray-500">Chưa có chữ ký nào</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
 
           </div>
         </div>
-        {/* <div className="col-span-1 space-y-6">
-          <div className="overflow-hidden rounded-lg bg-white shadow">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">
-                Lịch sử chữ ký
-              </h3>
-            </div>
-
-            <div className="border-t border-gray-200">
-              {contract.signatures && contract.signatures.length > 0 ? (
-                <ul className="divide-y divide-gray-200">
-                  {contract.signatures.map((signature: SignatureType) => (
-                    <li key={signature.id} className="px-4 py-4 sm:px-6">
-                      <div className="flex flex-col">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-900">
-                            {signature.user.name}
-                          </p>
-
-                          {signature.isValid ? (
-                            <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                              <CheckCircle className="mr-1 h-3 w-3" />
-                              Hợp lệ
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
-                              <XCircle className="mr-1 h-3 w-3" />
-                              Không hợp lệ
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          {formatDate(signature.signedAt)}
-                        </p>
-                        <div className="mt-2">
-                          <p className="text-xs font-medium text-gray-500">Chữ ký:</p>
-                          <p className="break-all rounded bg-gray-50 p-1 text-xs font-mono text-gray-900">
-                            {signature.signatureHash}
-                          </p>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="flex flex-col items-center justify-center px-4 py-6 text-center sm:px-6">
-                  <FileText className="mb-2 h-8 w-8 text-gray-400" />
-                  <p className="text-sm text-gray-500">Chưa có chữ ký nào</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div> */}
-
       </div>
       <SignatureDialog
         isOpen={isSignatureDialogOpen}
+        onsign= {handleSignatureSuccess}
         onClose={() => setIsSignatureDialogOpen(false)}
-        onSign={handleSignContract}
-        contractHash={contract.hash}
+        contractId={contract.id}
       />
     </div>
   );
