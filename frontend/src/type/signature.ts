@@ -3,6 +3,7 @@ export interface SignatureType {
   signatureHash: string,
   isValid: boolean,
   signedAt: Date,
+  signatureAlgo: string
   user: {
     id: number,
     name: string,

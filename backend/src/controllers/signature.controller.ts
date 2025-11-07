@@ -40,13 +40,14 @@ export class SignatureController {
         .json({ message: error.message || "Lỗi ký hợp đồng" });
     }
   }
-  // POST /signatures/:id/verify
+
+  // POST /signatures/:id/verify api này hiện này không gọi lên fe mà được gọi ở phần lấy danh sách người tạo hợp đồng và người gán
   async verifySignature(req: Request, res: Response) {
     try {
       const { id } = req.params;
       if (!id) return res.status(400).json({ message: "Thiếu signature id" });
 
-      const result = await this.signatureService.verifySignature(Number(id));
+      const result = await this.signatureService.verifySignature(Number(id), "");
       return res.status(200).json({
         message: result.isValid ? "Chữ ký hợp lệ" : "Chữ ký không hợp lệ",
         ...result,
@@ -56,6 +57,7 @@ export class SignatureController {
       return res.status(400).json({ message: error.message });
     }
   }
+
   // GET /signatures/:contractId
   async getSignaturesByContract(req: Request, res: Response) {
     try {

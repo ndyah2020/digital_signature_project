@@ -66,9 +66,6 @@ const ContractDetail: React.FC = () => {
     "/contracts/get-create-recipient"
   );
 
-  console.log(contractAssigner)
-
-
   if (loading) {
     return <div className="flex h-full items-center justify-center p-10">
       <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
@@ -488,7 +485,7 @@ const ContractDetail: React.FC = () => {
                               {formatDate(signature.signedAt)}
                             </p>
 
-                            {/* Nút xem chi tiết kỹ thuật
+                            Nút xem chi tiết kỹ thuật
                             <div className="mt-2">
                               <button
                                 onClick={() => handleToggleSignature(signature.id)}
@@ -501,10 +498,10 @@ const ContractDetail: React.FC = () => {
                                 }
                               </button>
 
-                              Thông tin kỹ thuật (chỉ hiển thị khi bấm)
+                              {/* Thông tin kỹ thuật (chỉ hiển thị khi bấm) */}
                               {expandedSignatureId === signature.id && (
                                 <div className="mt-2 space-y-2 rounded bg-gray-50 p-3">
-                                  {/* <div>
+                                  <div>
                                     <p className="text-xs font-medium text-gray-500">Thuật toán:</p>
                                     <p className="text-xs font-mono text-gray-900">
                                       {signature.signatureAlgo || 'N/A'}
@@ -518,7 +515,7 @@ const ContractDetail: React.FC = () => {
                                   </div>
                                 </div>
                               )}
-                            </div> */}
+                            </div> 
                           </div>
                         </li>
                       ))}

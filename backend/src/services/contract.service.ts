@@ -8,6 +8,7 @@ import { User, UserRole } from "../entities/User";
 import { ContractRecipient, SignStatus } from "../entities/ContractRecipient";
 import { Response } from "express";
 import { In, Repository } from "typeorm";
+import { Signature } from "../entities/Signature";
 
 const fs = require("fs");
 const crypto = require("crypto");
@@ -17,6 +18,7 @@ export class ContractService {
   private userRepository = AppDataSource.getRepository(User);
   private contractRepository = AppDataSource.getRepository(Contract);
   private auditLogService = new AuditLogService();
+  private signRepository = AppDataSource.getRepository(Signature);
 
   async createContract(
     file: import("multer").File,
@@ -90,58 +92,40 @@ export class ContractService {
 
   // service
   async getAllContractsByCreateAndRecipient(userId: number) {
-    // 1a. Lấy ID hợp đồng user đã TẠO
-    const createdContracts = await this.contractRepository.find({
-      where: { createdBy: { id: userId } },
-      select: { id: true } 
-    });
-    const createdContractIds = createdContracts.map(c => c.id);
-
-    // 1b. Lấy ID hợp đồng user được GÁN
-    const recipientLinks = await this.recipientRepository.find({
-      where: { userId: userId },
-      select: { contractId: true }
-    });
-    const recipientContractIds = recipientLinks.map(r => r.contractId);
-
-    // 1c. Gộp và loại bỏ trùng lặp
-    const allContractIds = [
-      ...new Set([...createdContractIds, ...recipientContractIds])
-    ];
-
-    if (allContractIds.length === 0) {
-      return []; 
-    }
-    
     return this.contractRepository.find({
-      where: {
-        id: In(allContractIds),
-      },
+      where: [
+        { createdBy: { id: userId } },
+        { recipientLinks: { user: { id: userId } } },
+      ],
       relations: ["createdBy", "recipientLinks", "recipientLinks.user"],
       select: {
         id: true,
         title: true,
+        description: true,
+        file_url: true,
+        hash: true,
+        status: true,
         createdBy: {
-          id: true,
           email: true,
         },
-        recipientLinks: {
-          user: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-          sign_status: true,
-          signed_at: true,
-          deadline: true,
-          isExpired: true,
-        }
       },
-      order: {
-        updatedAt: "DESC" 
-      }
     });
+  }
+
+  async getDocumentAndHash(file_url: string): Promise<string> {
+    try {
+      const response = await axios.get(file_url, {
+        responseType: "arraybuffer",
+      });
+      const fileBuffer = Buffer.from(response.data);
+      return crypto.createHash("sha256").update(fileBuffer).digest("hex");
+    } catch (error: any) {
+      console.error(`Lỗi khi tải file từ Cloudinary: ${error.message}`);
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        throw new Error(`File gốc trên Cloudinary không tồn tại (404).`);
+      }
+      throw new Error(`Không thể tải file hợp đồng từ Cloudinary.`);
+    }
   }
 
   async verifyContractIntegrity(
@@ -161,15 +145,7 @@ export class ContractService {
         throw new Error("404: Không tìm thấy file URL của hợp đồng này.");
       }
 
-      const response = await axios.get(fileUrl, {
-        responseType: "arraybuffer",
-      });
-
-      const fileBuffer = Buffer.from(response.data);
-      const calculatedHash = crypto
-        .createHash("sha256")
-        .update(fileBuffer)
-        .digest("hex");
+      const calculatedHash = await this.getDocumentAndHash(fileUrl)
 
       if (calculatedHash === storedHash) {
         return { status: "verified", message: "File toàn vẹn." };
@@ -197,7 +173,7 @@ export class ContractService {
             );
             const errorJson = JSON.parse(errorDataString);
             errorBody = errorJson.error?.message || errorBody;
-          } catch (e) {}
+          } catch (e) { }
 
           if (
             errorBody.includes("untrusted customer") ||
@@ -240,7 +216,7 @@ export class ContractService {
     response.data.pipe(res);
   }
 
-  async getContractById(id: number) {
+  async getContractById(id: number) : Promise<Contract> {
     const contract = await this.contractRepository.findOne({
       where: { id },
       relations: [
@@ -270,6 +246,7 @@ export class ContractService {
           signatureHash: true,
           isValid: true,
           signedAt: true,
+          signatureAlgo: true,
           user: {
             id: true,
             name: true,
