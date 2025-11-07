@@ -1,16 +1,25 @@
 import { AppDataSource } from "../config/data_source";
 import { ContractRecipient } from "../entities/ContractRecipient";
-import { Signature } from "../entities/Signature";
-import { Contract } from "../entities/Contract";
+import { SignatureService } from "../services/signature.service";
+import { ContractService } from "../services/contract.service";
 
 export class RecipientService {
     private recipientRepo = AppDataSource.getRepository(ContractRecipient);
-    private signatureRepo = AppDataSource.getRepository(Signature)
-    private contractsRepo = AppDataSource.getRepository(Contract)
+    private signatureService = new SignatureService();
+    private contractService = new ContractService();
     
-    // async verifySignOfRecipient(contractId: number) {
-    //     const contract = await this.contractsRepo
-    // }
+    async verifySignOfRecipient(contractId: number, contractHashByCould: string) {
+        const contract = await this.contractService.getContractById(contractId);
+        if(!contract) throw new Error("Hợp đồng không tồn tại");
+
+        if(!contract.file_url) throw new Error("Không tồn tại file url");
+
+        // const contractHashByCould = await this.contractService.getDocumentAndHash(contract.file_url);
+        const result = this.signatureService.verifySignature(contractId, contractHashByCould);
+
+        return result
+    }
+    // phần verify chưa hoàn thành
 
     async getRecipientbyContract(contractId: number) {
         const recipient = await this.recipientRepo.find({
