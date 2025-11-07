@@ -12,6 +12,7 @@ import { useCheckSigner } from '../api/singnature.api';
 import { useAuth } from '../hooks/useAuth';
 import { ContractSummary } from '../type/assigner';
 import { SignatureType } from '../type/signature';
+import { RecipientType } from '../type/recipient.type';
 
 
 const VerificationStatusBadge: React.FC<{ status: VerificationStatus; errorMessage: string | null }> = ({ status, errorMessage }) => {
@@ -58,13 +59,14 @@ const ContractDetail: React.FC = () => {
   const { toast } = useToast();
   const { data: contract, loading, error, refetch: refetchContract } = useFetch<ContractDataType>(`/contracts/${id}`);
   const { status: verificationStatus, errorMessage: verificationError } = useVerifyContractApi(`/contracts/verify_contracts/${contract?.id}`);
+  console.log(contract?.id)
+  const { data: recipient } = useFetch<RecipientType[]>(`/recipients/contract/${contract?.id}/get-recipient`)
+
+  console.log(recipient)
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const { mutate: viewContract, isLoading } = useViewContract();
   const { mutateAsync: checkSigner } = useCheckSigner();
   const { user } = useAuth();
-  const { data: contractAssigner } = useFetch<ContractSummary[]>(
-    "/contracts/get-create-recipient"
-  );
 
   if (loading) {
     return <div className="flex h-full items-center justify-center p-10">
@@ -143,14 +145,14 @@ const ContractDetail: React.FC = () => {
     }
   };
 
-   const handleSignatureSuccess = () => {
+  const handleSignatureSuccess = () => {
     setIsSignatureDialogOpen(false);
     toast({
       title: "Ký thành công",
       description: "Chữ ký của bạn đã được lưu lại.",
       variant: "default",
     });
-    refetchContract(); 
+    refetchContract();
   };
 
   const handleToggleSignature = (id: number) => {
@@ -375,74 +377,74 @@ const ContractDetail: React.FC = () => {
               </h3>
             </div>
             <div className="border-t border-gray-200">
-              {contractAssigner && contractAssigner.length > 0 ? (
-                contractAssigner.map((contract) => (
-                  <div key={contract.id} className="border-b border-gray-300">
-                    {contract.recipientLinks && contract.recipientLinks.length > 0 ? (
-                      <ul className="divide-y divide-gray-200">
-                        {contract.recipientLinks.map((recipient) => (
-                          <li
-                            key={recipient.user.id}
-                            className="border-b border-gray-200 px-4 py-4 last:border-b-0 sm:px-6"
-                          >
-                            <div className="flex items-center justify-between">
-                              {/* Thông tin người được gán */}
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">
-                                  {recipient.user.name}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  {recipient.user.email}
-                                </p>
-                              </div>
+              {/* Giả sử 'recipient' là state chứa mảng JSON mà API trả về.
+    (ví dụ: const [recipient, setRecipient] = useState([...]))
+  */}
+              {recipient && recipient.length > 0 ? (
+                // BỎ vòng lặp 'contractAssigner.map'
+                // LẶP TRỰC TIẾP qua mảng 'recipient'
+                <ul className="divide-y divide-gray-200">
+                  {recipient.map((item) => (
+                    // 'item' bây giờ chính là 
+                    // { contractId: 1, userId: 2, user: {...}, ... }
+                    <li
+                      key={item.userId} // Dùng 'userId' hoặc 'user.id' làm key
+                      className="border-b border-gray-200 px-4 py-4 last:border-b-0 sm:px-6"
+                    >
+                      <div className="flex items-center justify-between">
+                        {/* Thông tin người được gán */}
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {item.user.name}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {item.user.email}
+                          </p>
+                        </div>
 
-                              <div className="text-right">
-                                {recipient.sign_status === "signed" ? (
-                                  <>
-                                    <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-0.5 text-xs font-medium text-green-800">
-                                      <CheckCircle className="mr-1 h-3 w-3" />
-                                      Đã ký
-                                    </span>
-                                    {recipient.signed_at && (
-                                      <p className="text-xs text-gray-500 mt-1">
-                                        Ký lúc:{" "}
-                                        {new Date(recipient.signed_at).toLocaleString("vi-VN")}
-                                      </p>
-                                    )}
-                                  </>
-                                ) : recipient.isExpired ? (
-                                  <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-0.5 text-xs font-medium text-red-800">
-                                    Hết hạn
-                                  </span>
-                                ) : (
-                                  <>
-                                    <span className="inline-flex items-center rounded-full bg-yellow-100 px-3 py-0.5 text-xs font-medium text-yellow-800">
-                                      <Clock className="mr-1 h-3 w-3" />
-                                      Chờ ký
-                                    </span>
-                                    {recipient.deadline && (
-                                      <p className="text-xs text-gray-500 mt-1">
-                                        Hạn ký:{" "}
-                                        {new Date(recipient.deadline).toLocaleDateString("vi-VN")}
-                                      </p>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <div className="px-4 py-5 text-center text-sm text-gray-500 sm:px-6">
-                        Chưa có bên nào tham gia.
+                        {/* Phần logic trạng thái (sao chép y hệt) */}
+                        <div className="text-right">
+                          {item.sign_status === "signed" ? (
+                            <>
+                              <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-0.5 text-xs font-medium text-green-800">
+                                <CheckCircle className="mr-1 h-3 w-3" />
+                                Đã ký
+                              </span>
+                              {/* Bạn có thể thêm logic xác thực chữ ký (isValid) ở đây nếu API trả về */}
+                              {item.signed_at && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Ký lúc:{" "}
+                                  {new Date(item.signed_at).toLocaleString("vi-VN")}
+                                </p>
+                              )}
+                            </>
+                          ) : item.isExpired ? (
+                            <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-0.5 text-xs font-medium text-red-800">
+                              Hết hạn
+                            </span>
+                          ) : (
+                            <>
+                              <span className="inline-flex items-center rounded-full bg-yellow-100 px-3 py-0.5 text-xs font-medium text-yellow-800">
+                                <Clock className="mr-1 h-3 w-3" />
+                                Chờ ký
+                              </span>
+                              {item.deadline && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Hạn ký:{" "}
+                                  {new Date(item.deadline).toLocaleDateString("vi-VN")}
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))
+                    </li>
+                  ))}
+                </ul>
               ) : (
+                // Nếu mảng rỗng
                 <div className="px-4 py-5 text-center text-sm text-gray-500 sm:px-6">
-                  Không có hợp đồng nào.
+                  Chưa có bên nào tham gia hợp đồng này.
                 </div>
               )}
             </div>
@@ -506,7 +508,7 @@ const ContractDetail: React.FC = () => {
                                     <p className="text-xs font-mono text-gray-900">
                                       {signature.signatureAlgo || 'N/A'}
                                     </p>
-                                  </div> 
+                                  </div>
                                   <div>
                                     <p className="text-xs font-medium text-gray-500">Giá trị chữ ký (Base64):</p>
                                     <p className="break-all text-xs font-mono text-gray-900">
@@ -515,7 +517,7 @@ const ContractDetail: React.FC = () => {
                                   </div>
                                 </div>
                               )}
-                            </div> 
+                            </div>
                           </div>
                         </li>
                       ))}
@@ -536,7 +538,7 @@ const ContractDetail: React.FC = () => {
       </div>
       <SignatureDialog
         isOpen={isSignatureDialogOpen}
-        onsign= {handleSignatureSuccess}
+        onsign={handleSignatureSuccess}
         onClose={() => setIsSignatureDialogOpen(false)}
         contractId={contract.id}
       />

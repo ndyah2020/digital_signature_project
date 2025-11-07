@@ -9,6 +9,7 @@ import contractRoutes from "./routes/contract.routes";
 import signatureRoutes from "./routes/signature.routes";
 import userRoutes from "./routes/user.routes";
 import twofaRoutes from "./routes/twofa.routes";
+import recipientRoutes from "./routes/recipient.routes"
 import { startExpiryJob } from "./utils/expiry.job";
 const app = express();
 app.use(cors());
@@ -21,6 +22,7 @@ app.use("/2fa", twofaRoutes);
 app.use("/users", userRoutes);
 app.use("/contracts", contractRoutes);
 app.use("/signatures", signatureRoutes);
+app.use("/recipients", recipientRoutes)
 // các route khác sau khi xác thực
 AppDataSource.initialize()
   .then(() => {

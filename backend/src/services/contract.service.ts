@@ -79,6 +79,7 @@ export class ContractService {
       select: {
         id: true,
         title: true,
+        createdAt: true,
         description: true,
         file_url: true,
         hash: true,
@@ -103,9 +104,11 @@ export class ContractService {
         title: true,
         description: true,
         file_url: true,
+        createdAt: true,
         hash: true,
         status: true,
         createdBy: {
+          name: true,
           email: true,
         },
       },

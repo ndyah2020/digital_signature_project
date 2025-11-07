@@ -26,6 +26,7 @@ const Contracts: React.FC = () => {
   const [isAssignerOpen, setisAssignerOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractDataType | null>(null);
 
+  console.log(contracts)
 
   const { mutate: createMutate, isLoading: isCreating } = useCreateContract();
   const { mutate: updateMutate, isLoading: isUpdating } = useUpdateContract();
@@ -78,9 +79,9 @@ const Contracts: React.FC = () => {
       return (
         <select
           className={`rounded-md border px-2 py-1 text-sm text-gray-700 ${isOwner
-              ? 'border-gray-300 bg-white focus:border-indigo-500 focus:outline-none'
-              : 'border-gray-200 bg-gray-100 cursor-not-allowed text-gray-500'
-          }`}
+            ? 'border-gray-300 bg-white focus:border-indigo-500 focus:outline-none'
+            : 'border-gray-200 bg-gray-100 cursor-not-allowed text-gray-500'
+            }`}
           value={contract.status}
           onChange={async (e) => {
             if (!isOwner) return;
@@ -95,7 +96,7 @@ const Contracts: React.FC = () => {
             }
           }}
           disabled={isUpdatingStatus || !isOwner}
-          
+
         >
           <option value="draft">Bản nháp</option>
           <option value="pending">Chờ ký</option>
@@ -107,13 +108,12 @@ const Contracts: React.FC = () => {
     sortable: true,
   }
     ,
-
-  // {
-  //   id: 'creator',
-  //   header: 'Người tạo',
-  //   cell: (contract: ContractDataType) => <div className="text-sm text-gray-500">{contract.creator}</div>,
-  //   sortable: true
-  // },
+  {
+    id: 'creator',
+    header: 'Người tạo',
+    cell: (contract: ContractDataType) => <div className="text-sm text-gray-500">{contract.createdBy.name}</div>,
+    sortable: true
+  },
   {
     id: 'createdAt',
     header: 'Ngày tạo',
