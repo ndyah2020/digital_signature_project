@@ -32,7 +32,7 @@ export class RecipientService {
 
 
     async getRecipientbyContract(contractId: number) {
-        this.verifySignWhenGetRecipient(contractId)
+        // this.verifySignWhenGetRecipient(contractId)
         const recipients = await this.recipientRepo.find({
             where: {
                 contractId: contractId,

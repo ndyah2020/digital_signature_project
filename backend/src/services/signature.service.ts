@@ -6,7 +6,7 @@ import { AuditLogService } from "../services/auditLog.service";
 import { ContractService } from "../services/contract.service";
 import { ContractRecipient, SignStatus } from "../entities/ContractRecipient";
 import { PendingSign } from "../entities/PendingSign";
-import axios from "axios";
+
 
 const crypto = require("crypto");
 export class SignatureService {
@@ -26,12 +26,13 @@ export class SignatureService {
       const signatureRepo = tx.getRepository(Signature);
       const userRepo = tx.getRepository(User);
       const pendingSignRepo = tx.getRepository(PendingSign)
+
       const contract = await contractRepo.findOne({
         where: { id: contractId },
         relations: ["signatures", "signatures.user"],
+        cache: false, // ← BẮT BUỘC
       });
       if (!contract) throw new Error("Hợp đồng không tồn tại");
-
 
       const user = await userRepo.findOne({ where: { id: userId } });
       if (!user) throw new Error("Người dùng không tồn tại");
@@ -193,10 +194,11 @@ export class SignatureService {
           "Xác thực chữ ký sau khi ký thất bại. Chữ ký không hợp lệ. Mọi thao tác đã được hủy bỏ."
         );
       }
+
       // Save signature & update recipient as before
       const newSignature = signatureRepo.create({
-        contract,
-        user,
+        contract: { id: contractId } as Contract,
+        user: { id: userId } as User,
         signatureAlgo: "RSA-PSS-SHA256",
         signatureHash,
         isValid,
@@ -217,6 +219,7 @@ export class SignatureService {
       const failedCount = await recipientRepo.count({
         where: { contractId, sign_status: SignStatus.FAILED },
       });
+
       if (pendingCount === 0 && failedCount === 0) {
         contract.status = ContractStatus.SIGNED;
         contract.updatedAt = new Date();
@@ -227,6 +230,7 @@ export class SignatureService {
           `Hợp đồng #${contractId} đã được ký đầy đủ.`
         );
       }
+      
       // xóa bảng ghi xác thực otp sau khi ký thành công
       await pendingSignRepo.delete(pendingSign.id);
 
