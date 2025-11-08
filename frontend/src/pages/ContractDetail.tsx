@@ -10,7 +10,6 @@ import { useVerifyContractApi, VerificationStatus } from '../hooks/useVerifyHash
 import { useViewContract } from '../api/contract.api';
 import { useCheckSigner } from '../api/singnature.api';
 import { useAuth } from '../hooks/useAuth';
-import { ContractSummary } from '../type/assigner';
 import { SignatureType } from '../type/signature';
 import { RecipientType } from '../type/recipient.type';
 
@@ -57,12 +56,11 @@ const ContractDetail: React.FC = () => {
   const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
   const { toast } = useToast();
+
   const { data: contract, loading, error, refetch: refetchContract } = useFetch<ContractDataType>(`/contracts/${id}`);
   const { status: verificationStatus, errorMessage: verificationError } = useVerifyContractApi(`/contracts/verify_contracts/${contract?.id}`);
-  console.log(contract?.id)
-  const { data: recipient } = useFetch<RecipientType[]>(`/recipients/contract/${contract?.id}/get-recipient`)
+  const { data: recipient, refetch: refetchRecipient } = useFetch<RecipientType[]>(`/recipients/contract/${contract?.id}/get-recipient`)
 
-  console.log(recipient)
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const { mutate: viewContract, isLoading } = useViewContract();
   const { mutateAsync: checkSigner } = useCheckSigner();
@@ -147,12 +145,8 @@ const ContractDetail: React.FC = () => {
 
   const handleSignatureSuccess = () => {
     setIsSignatureDialogOpen(false);
-    toast({
-      title: "Ký thành công",
-      description: "Chữ ký của bạn đã được lưu lại.",
-      variant: "default",
-    });
     refetchContract();
+    refetchRecipient();
   };
 
   const handleToggleSignature = (id: number) => {
@@ -377,18 +371,13 @@ const ContractDetail: React.FC = () => {
               </h3>
             </div>
             <div className="border-t border-gray-200">
-              {/* Giả sử 'recipient' là state chứa mảng JSON mà API trả về.
-    (ví dụ: const [recipient, setRecipient] = useState([...]))
-  */}
               {recipient && recipient.length > 0 ? (
-                // BỎ vòng lặp 'contractAssigner.map'
-                // LẶP TRỰC TIẾP qua mảng 'recipient'
+
                 <ul className="divide-y divide-gray-200">
                   {recipient.map((item) => (
-                    // 'item' bây giờ chính là 
-                    // { contractId: 1, userId: 2, user: {...}, ... }
+  
                     <li
-                      key={item.userId} // Dùng 'userId' hoặc 'user.id' làm key
+                      key={item.userId} 
                       className="border-b border-gray-200 px-4 py-4 last:border-b-0 sm:px-6"
                     >
                       <div className="flex items-center justify-between">
@@ -401,16 +390,14 @@ const ContractDetail: React.FC = () => {
                             {item.user.email}
                           </p>
                         </div>
-
-                        {/* Phần logic trạng thái (sao chép y hệt) */}
+          
                         <div className="text-right">
                           {item.sign_status === "signed" ? (
                             <>
                               <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-0.5 text-xs font-medium text-green-800">
                                 <CheckCircle className="mr-1 h-3 w-3" />
                                 Đã ký
-                              </span>
-                              {/* Bạn có thể thêm logic xác thực chữ ký (isValid) ở đây nếu API trả về */}
+                              </span>                 
                               {item.signed_at && (
                                 <p className="text-xs text-gray-500 mt-1">
                                   Ký lúc:{" "}
@@ -456,8 +443,7 @@ const ContractDetail: React.FC = () => {
                   </h3>
                 </div>
 
-                <div className="border-t border-gray-200">
-                  {/* Lặp qua contract.signatures từ API chính */}
+                <div className="border-t border-gray-200">                
                   {contract.signatures && contract.signatures.length > 0 ? (
                     <ul className="divide-y divide-gray-200">
                       {contract.signatures.map((signature: SignatureType) => (
@@ -467,10 +453,6 @@ const ContractDetail: React.FC = () => {
                               <p className="text-sm font-medium text-gray-900">
                                 {signature.user.name}
                               </p>
-
-                              {/* Đây là kết quả xác minh TỰ ĐỘNG từ backend
-                            (signature.isValid)
-                          */}
                               {signature.isValid ? (
                                 <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
                                   <ShieldCheck className="mr-1 h-3 w-3" />
@@ -487,7 +469,6 @@ const ContractDetail: React.FC = () => {
                               {formatDate(signature.signedAt)}
                             </p>
 
-                            Nút xem chi tiết kỹ thuật
                             <div className="mt-2">
                               <button
                                 onClick={() => handleToggleSignature(signature.id)}
@@ -538,7 +519,7 @@ const ContractDetail: React.FC = () => {
       </div>
       <SignatureDialog
         isOpen={isSignatureDialogOpen}
-        onsign={handleSignatureSuccess}
+        onSuccess={handleSignatureSuccess}
         onClose={() => setIsSignatureDialogOpen(false)}
         contractId={contract.id}
       />

@@ -19,19 +19,30 @@ const signContract = async (payload: SignPayload): Promise<SignResponse> => {
 };
 
 export const useSignature = () => {
+  const { toast } = useToast();
   return useMutation<SignResponse, SignPayload>(
     signContract,
     {
       onSuccess: (data, variables) => {
         console.log(
-          `✅ Ký hợp đồng ID: ${variables.contractId} thành công (${data.message})`
+          `Ký hợp đồng ID: ${variables.contractId} thành công (${data.message})`
         );
+        toast({
+          title: "Ký hợp đồng",
+          description: `Ký hợp đồng ID: ${variables.contractId} thành công`,
+        });
       },
       onError: (error, variables) => {
         console.error(
           `Lỗi khi ký hợp đồng ID: ${variables?.contractId || "?"}:`,
           error.message
         );
+        
+        toast({
+          title: "Ký hợp đồng",
+          description: `Lỗi khi ký hợp đồng ID: ${variables?.contractId || error.message}`,
+          variant: "destructive",
+        });
       },
     }
   );

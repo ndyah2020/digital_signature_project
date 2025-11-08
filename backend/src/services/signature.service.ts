@@ -3,6 +3,7 @@ import { Contract, ContractStatus } from "../entities/Contract";
 import { Signature } from "../entities/Signature";
 import { User, UserRole } from "../entities/User";
 import { AuditLogService } from "../services/auditLog.service";
+import { ContractService } from "../services/contract.service";
 import { ContractRecipient, SignStatus } from "../entities/ContractRecipient";
 import { PendingSign } from "../entities/PendingSign";
 import axios from "axios";
@@ -12,6 +13,7 @@ export class SignatureService {
   private signatureRepository = AppDataSource.getRepository(Signature);
   private recipientRepository = AppDataSource.getRepository(ContractRecipient);
   private auditService = new AuditLogService();
+  private contractService = new ContractService();
   // ký hợp đồng
   async signContract(
     contractId: number,
@@ -24,7 +26,6 @@ export class SignatureService {
       const signatureRepo = tx.getRepository(Signature);
       const userRepo = tx.getRepository(User);
       const pendingSignRepo = tx.getRepository(PendingSign)
-
       const contract = await contractRepo.findOne({
         where: { id: contractId },
         relations: ["signatures", "signatures.user"],
@@ -38,7 +39,7 @@ export class SignatureService {
         where: {
           user: { id: userId },
           contract: { id: contractId },
-          isVerified: true, 
+          isVerified: true,
         },
       });
 
@@ -77,10 +78,17 @@ export class SignatureService {
         throw new Error("Không tìm thấy private key");
 
       //  xác minh tất cả chữ ký hiện có để đảm bảo file/hash không bị thay đổi ---
-      const currentHash = contract.hash;
-      if (!currentHash)
-        throw new Error("Hợp đồng chưa có giá trị hash để xác minh");
+      const masterHash = contract.hash;
+      if (!contract.file_url) throw new Error("Hợp đồng gốc không tồn tại");
 
+      const cloudHash = await this.contractService.getDocumentAndHash(contract.file_url);
+      if (masterHash !== cloudHash) {
+        throw new Error("Phát hiện file hợp đồng trên cloud đã bị thay đổi... hoăc lỗi lấy dữ liệu");
+      }
+
+      if (!masterHash)
+        throw new Error("Hợp đồng chưa có giá trị hash để xác minh");
+      console.log(contract.signatures)
       // Nếu có chữ ký trước đó, cần verify từng chữ ký đó với publicKey của người ký tương ứng
       if (contract.signatures && contract.signatures.length > 0) {
         for (const existingSig of contract.signatures) {
@@ -93,7 +101,7 @@ export class SignatureService {
 
           try {
             const verifier = crypto.createVerify("RSA-SHA256");
-            verifier.update(currentHash);
+            verifier.update(masterHash);
             verifier.end();
             const ok = verifier.verify(
               {
@@ -180,10 +188,16 @@ export class SignatureService {
       } catch {
         isValid = false;
       }
+      if (!isValid) {
+        throw new Error(
+          "Xác thực chữ ký sau khi ký thất bại. Chữ ký không hợp lệ. Mọi thao tác đã được hủy bỏ."
+        );
+      }
 
       // Save signature & update recipient as before
+      console.log(contractId)
       const newSignature = signatureRepo.create({
-        contract: { id: contractId },
+        contract: { id: contract.id },
         user: { id: userId },
         signatureAlgo: "RSA-PSS-SHA256",
         signatureHash,
@@ -235,28 +249,18 @@ export class SignatureService {
 
 
   // xác minh chữ ký số
-  async verifySignature(signatureId: number, documentHashFromCloud: string) {
-    // lấy thoogn tin chữ ký
-    const signature = await this.signatureRepository.findOne({
-      where: { id: signatureId },
-      relations: ["contract", "user"],
-    });
-
-    //  các bước kiểm tra
+  async verifySignature(signature: Signature, documentHashFromCloud: string) {
     if (!signature) throw new Error("Không tìm thấy chữ ký");
-    const { contract, user } = signature;
-    if (!user.publicKey) throw new Error("Người dùng không có public key");
-    if (!contract.file_url) throw new Error("Hợp đồng không có file URL");
- 
+
     // tạo verifier với file hợp đồng vừa hash
     const verifier = crypto.createVerify("RSA-SHA256");
-    verifier.update(documentHashFromCloud); 
+    verifier.update(documentHashFromCloud);
     verifier.end();
 
     // tiến hành giải mã chữ ký và xác thực hợp đồng tải về so với hợp đồng hash trong chữ ký
     const isValid = verifier.verify(
       {
-        key: user.publicKey,
+        key: signature.user.publicKey,
         padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
         saltLength: 32,
       },
@@ -267,15 +271,13 @@ export class SignatureService {
     await this.signatureRepository.save(signature);
 
     await this.auditService.createLog(
-      user.id,
+      signature.user.id,
       "VERIFY_SIGNATURE",
-      `Xác minh chữ ký ID ${signature.id} cho hợp đồng ${contract.id} → ${isValid ? "Hợp lệ" : "Không hợp lệ hoặc file hợp đồng đã bị thay đổi"
+      `Xác minh chữ ký ID ${signature.id} cho hợp đồng ${signature.contract.id} → ${isValid ? "Hợp lệ" : "Không hợp lệ hoặc file hợp đồng đã bị thay đổi"
       }`
     );
-    return { isValid };
+    return isValid;
   }
-
-
 
   async getSignatureById(signatureId: number) {
     return await this.signatureRepository.findOne({
@@ -283,13 +285,30 @@ export class SignatureService {
       relations: ["user", "contract"],
     });
   }
+
   async getSignaturesByContract(contractId: number) {
     return await this.signatureRepository.find({
       where: { contract: { id: contractId } },
-      relations: ["user"],
+      relations: ["user", "contract"],
+      select: {
+        id: true,
+        contract: {
+          id: true,
+          file_url: true,
+        },
+        user: {
+          id: true,
+          name: true,
+          email: true,
+          publicKey: true,
+        },
+        signatureHash: true,
+        isValid: true
+      },
       order: { signedAt: "DESC" },
     });
   }
+
   async getAllSignatures() {
     return await this.signatureRepository.find({
       relations: ["user", "contract"],

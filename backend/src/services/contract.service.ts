@@ -122,11 +122,20 @@ export class ContractService {
       const fileBuffer = Buffer.from(response.data);
       return crypto.createHash("sha256").update(fileBuffer).digest("hex");
     } catch (error: any) {
-      console.error(`Lỗi khi tải file từ Cloudinary: ${error.message}`);
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        throw new Error(`File gốc trên Cloudinary không tồn tại (404).`);
+      console.error(`[getDocumentAndHash] Lỗi gốc khi tải từ Cloudinary:`, error.message);
+
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        if (status === 404) {
+          throw new Error(`File gốc trên Cloudinary không tồn tại (404). URL: ${file_url}`);
+        }
+        if (status === 401 || status === 403) {
+          throw new Error(`Không có quyền truy cập file trên Cloudinary (Lỗi ${status}). URL: ${file_url}`);
+        }
+        throw new Error(`Không thể tải file hợp đồng. Cloudinary trả về lỗi ${status}.`);
       }
-      throw new Error(`Không thể tải file hợp đồng từ Cloudinary.`);
+
+      throw new Error(`Không thể tải file hợp đồng từ Cloudinary (Lỗi mạng hoặc hệ thống). Message: ${error.message}`);
     }
   }
 
@@ -218,7 +227,7 @@ export class ContractService {
     response.data.pipe(res);
   }
 
-  async getContractById(id: number) : Promise<Contract> {
+  async getContractById(id: number): Promise<Contract> {
     const contract = await this.contractRepository.findOne({
       where: { id },
       relations: [

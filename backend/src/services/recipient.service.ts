@@ -7,22 +7,33 @@ export class RecipientService {
     private recipientRepo = AppDataSource.getRepository(ContractRecipient);
     private signatureService = new SignatureService();
     private contractService = new ContractService();
-    
-    async verifySignOfRecipient(contractId: number, contractHashByCould: string) {
-        const contract = await this.contractService.getContractById(contractId);
-        if(!contract) throw new Error("Hợp đồng không tồn tại");
 
-        if(!contract.file_url) throw new Error("Không tồn tại file url");
+    async verifySignWhenGetRecipient(contractId: number) {
+        try {
+            const contract = await this.contractService.getContractById(contractId);
+            if (!contract) throw new Error("Hợp đồng không tồn tại");
+            if (!contract.file_url) throw new Error("Không tồn tại file url");
+            const contractHashByCloud = await this.contractService.getDocumentAndHash(contract.file_url);
 
-        // const contractHashByCould = await this.contractService.getDocumentAndHash(contract.file_url);
-        const result = this.signatureService.verifySignature(contractId, contractHashByCould);
+            const signatures = await this.signatureService.getSignaturesByContract(contractId);
 
-        return result
+            const results = await Promise.all(
+                signatures.map(async (signature) => {                 
+                    return await this.signatureService.verifySignature(signature, contractHashByCloud);
+                })
+            );
+            return results;
+
+        } catch (error: any) {
+            console.error(`[verifySignWhenGetRecipient] Lỗi: ${error.message}`);
+            throw error;
+        }
     }
-    // phần verify chưa hoàn thành
+
 
     async getRecipientbyContract(contractId: number) {
-        const recipient = await this.recipientRepo.find({
+        this.verifySignWhenGetRecipient(contractId)
+        const recipients = await this.recipientRepo.find({
             where: {
                 contractId: contractId,
             },
@@ -41,7 +52,7 @@ export class RecipientService {
                 }
             }
         });
-        return recipient;
+        return recipients;
     }
 }
 

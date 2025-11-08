@@ -26,7 +26,7 @@ const Contracts: React.FC = () => {
   const [isAssignerOpen, setisAssignerOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractDataType | null>(null);
 
-  console.log(contracts)
+
 
   const { mutate: createMutate, isLoading: isCreating } = useCreateContract();
   const { mutate: updateMutate, isLoading: isUpdating } = useUpdateContract();
