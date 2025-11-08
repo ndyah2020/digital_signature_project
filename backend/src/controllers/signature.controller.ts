@@ -42,21 +42,21 @@ export class SignatureController {
   }
 
   // POST /signatures/:id/verify api này hiện này không gọi lên fe mà được gọi ở phần lấy danh sách người tạo hợp đồng và người gán
-  async verifySignature(req: Request, res: Response) {
-    try {
-      const { id } = req.params;
-      if (!id) return res.status(400).json({ message: "Thiếu signature id" });
+  // async verifySignature(req: Request, res: Response) {
+  //   try {
+  //     const { id } = req.params;
+  //     if (!id) return res.status(400).json({ message: "Thiếu signature id" });
 
-      const result = await this.signatureService.verifySignature(Number(id), "");
-      return res.status(200).json({
-        message: result.isValid ? "Chữ ký hợp lệ" : "Chữ ký không hợp lệ",
-        ...result,
-      });
-    } catch (error: any) {
-      console.error("Lỗi khi xác minh chữ ký:", error);
-      return res.status(400).json({ message: error.message });
-    }
-  }
+  //     const result = await this.signatureService.verifySignature(Number(id), "");
+  //     return res.status(200).json({
+  //       message: result.isValid ? "Chữ ký hợp lệ" : "Chữ ký không hợp lệ",
+  //       ...result,
+  //     });
+  //   } catch (error: any) {
+  //     console.error("Lỗi khi xác minh chữ ký:", error);
+  //     return res.status(400).json({ message: error.message });
+  //   }
+  // }
 
   // GET /signatures/:contractId
   async getSignaturesByContract(req: Request, res: Response) {

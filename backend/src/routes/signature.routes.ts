@@ -10,9 +10,9 @@ router.post("/sign", authMiddleware, (req, res) =>
   controller.signContract(req, res)
 );
 // Xác minh 1 chữ ký (theo signature id)
-router.post("/:id/verify", authMiddleware, (req, res) =>
-  controller.verifySignature(req, res)
-);
+// router.post("/:id/verify", authMiddleware, (req, res) =>
+//   controller.verifySignature(req, res)
+// );
 // Lấy chữ ký theo hợp đồng
 router.get("/:contractId", authMiddleware, (req, res) =>
   controller.getSignaturesByContract(req, res)

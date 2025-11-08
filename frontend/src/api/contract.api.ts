@@ -70,7 +70,7 @@ export const useCreateContract = () => {
     {
       onSuccess: () => {
         toast({
-          title: "✅ Tạo hợp đồng thành công!",
+          title: "Tạo hợp đồng thành công!",
           description: "Hợp đồng của bạn đã được lưu trữ an toàn.",
         });
       },

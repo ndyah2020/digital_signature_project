@@ -117,25 +117,44 @@ export class ContractService {
   async getDocumentAndHash(file_url: string): Promise<string> {
     try {
       const response = await axios.get(file_url, {
-        responseType: "arraybuffer",
+        responseType: "stream",
+        timeout: 15000,
       });
-      const fileBuffer = Buffer.from(response.data);
-      return crypto.createHash("sha256").update(fileBuffer).digest("hex");
+
+      return new Promise((resolve, reject) => {
+        const hash = crypto.createHash("sha256");
+        response.data.on("data", (chunk) => {
+          hash.update(chunk);
+        });
+
+        response.data.on("end", () => {
+          resolve(hash.digest("hex"));
+        });
+
+        response.data.on("error", (err) => {
+          reject(new Error(`Lỗi khi đọc stream file: ${err.message}`));
+        });
+      });
+
     } catch (error: any) {
       console.error(`[getDocumentAndHash] Lỗi gốc khi tải từ Cloudinary:`, error.message);
 
       if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        if (status === 404) {
-          throw new Error(`File gốc trên Cloudinary không tồn tại (404). URL: ${file_url}`);
+        if (error.response) {
+          const status = error.response.status;
+          if (status === 404) {
+            throw new Error(`File gốc trên Cloudinary không tồn tại (404). URL: ${file_url}`);
+          }
+          if (status === 401 || status === 403) {
+            throw new Error(`Không có quyền truy cập file trên Cloudinary (Lỗi ${status}). URL: ${file_url}`);
+          }
+          throw new Error(`Không thể tải file hợp đồng. Cloudinary trả về lỗi HTTP ${status}.`);
         }
-        if (status === 401 || status === 403) {
-          throw new Error(`Không có quyền truy cập file trên Cloudinary (Lỗi ${status}). URL: ${file_url}`);
+        else if (error.request) {
+          throw new Error(`Lỗi mạng khi tải file (${error.code || 'ECONNRESET'}). Không nhận được phản hồi.`);
         }
-        throw new Error(`Không thể tải file hợp đồng. Cloudinary trả về lỗi ${status}.`);
       }
-
-      throw new Error(`Không thể tải file hợp đồng từ Cloudinary (Lỗi mạng hoặc hệ thống). Message: ${error.message}`);
+      throw new Error(`Không thể tải file hợp đồng. Message: ${error.message}`);
     }
   }
 
@@ -317,14 +336,29 @@ export class ContractService {
   ) {
     const contract = await this.contractRepository.findOne({
       where: { id: contractId },
+      relations: ["createdBy"],
+      select: {
+        id: true,
+        createdBy: {
+          id: true
+        },
+        createdAt: true,
+        status: true,
+      }
     });
+    
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
 
     const actor = await this.userRepository.findOne({
       where: { id: senderId },
     });
     if (!actor) throw new Error("Không tìm thấy người gửi");
-    if (actor.role !== UserRole.ADMIN && contract.createdBy?.id !== senderId) {
+
+    const isNotAdmin = actor.role !== UserRole.ADMIN;
+    const isNotCreator = contract.createdBy?.id !== senderId;
+
+    // The error should only be thrown if the user is NOT an Admin AND NOT the Creator.
+    if (isNotAdmin && isNotCreator) {
       throw new Error(
         "Chỉ admin hoặc người tạo hợp đồng được phép gán người ký"
       );

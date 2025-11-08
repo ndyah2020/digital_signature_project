@@ -89,11 +89,6 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
       setCountdown(300);
     } catch (error) {
       console.error("Error sending OTP:", error);
-      toast({
-        title: "Lỗi",
-        description: "Không thể gửi OTP. Vui lòng thử lại.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -124,28 +119,11 @@ const SignatureDialog: React.FC<SignatureDialogProps> = ({
       const signResult = await signDocument({contractId, password});
       
       if(signResult.isValid) {
-        toast({
-          title: 'Thành công',
-          description: 'Hợp đồng đã được ký thành công.',
-        });
-        onSuccess(); // Chạy callback thành công (để refresh data)
-        onClose();   // Đóng dialog
-      } else {
-        // Ký thất bại (do backend ném lỗi đã rollback)
-        toast({
-          title: 'Ký thất bại',
-          description: signResult.message || "Đã có lỗi xảy ra. Vui lòng thử lại.",
-          variant: 'destructive'
-        });
-      }
-
+        onSuccess(); 
+        onClose();   
+      } 
     } catch (error: any) {
       console.error("Lỗi khi ký hoặc xác thực OTP:", error);
-      toast({
-        title: 'Lỗi hệ thống',
-        description: error.message || "Không thể hoàn tất thao tác.",
-        variant: 'destructive'
-      });
     } 
   };
 

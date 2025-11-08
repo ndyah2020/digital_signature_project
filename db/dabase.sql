@@ -60,8 +60,8 @@ CREATE TABLE contract_recipients (
 -- chữ ký số của người dùng trên hợp đồng
 CREATE TABLE signatures (
     id SERIAL PRIMARY KEY,
-    contract_id INT,
-    user_id INT,
+    contract_id INT NOT NULL,
+    user_id INT NOT NULL,
     signature_algo VARCHAR(50) DEFAULT 'RSA-PSS-SHA256',
     signature_hash TEXT NOT NULL,
     is_valid BOOLEAN DEFAULT FALSE,

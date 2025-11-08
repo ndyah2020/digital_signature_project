@@ -4,6 +4,7 @@ import {
   Column,
   ManyToOne,
   CreateDateColumn,
+  JoinColumn,
 } from "typeorm";
 import { User } from "./User";
 import { Contract } from "./Contract";
@@ -13,11 +14,13 @@ export class Signature {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @JoinColumn({ name: "contract_id" })
   @ManyToOne(() => Contract, (contract) => contract.signatures, {
     onDelete: "CASCADE",
   })
   contract: Contract;
 
+  @JoinColumn({ name: "user_id" })
   @ManyToOne(() => User, (user) => user.signatures, {
     onDelete: "CASCADE",
   })

@@ -57,9 +57,15 @@ const ContractDetail: React.FC = () => {
   const [showViewer, setShowViewer] = useState(false);
   const { toast } = useToast();
 
-  const { data: contract, loading, error, refetch: refetchContract } = useFetch<ContractDataType>(`/contracts/${id}`);
-  const { status: verificationStatus, errorMessage: verificationError } = useVerifyContractApi(`/contracts/verify_contracts/${contract?.id}`);
-  const { data: recipient, refetch: refetchRecipient } = useFetch<RecipientType[]>(`/recipients/contract/${contract?.id}/get-recipient`)
+const { data: contract, loading, error, refetch: refetchContract } = useFetch<ContractDataType>(`/contracts/${id}`);
+
+const { status: verificationStatus, errorMessage: verificationError } = useVerifyContractApi(
+  contract?.id ? `/contracts/verify_contracts/${contract.id}` : null
+);
+
+const { data: recipient, refetch: refetchRecipient } = useFetch<RecipientType[]>(
+  contract?.id ? `/recipients/contract/${contract.id}/get-recipient` : ""
+);
 
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const { mutate: viewContract, isLoading } = useViewContract();

@@ -32,6 +32,7 @@ export class SignatureService {
       });
       if (!contract) throw new Error("Hợp đồng không tồn tại");
 
+
       const user = await userRepo.findOne({ where: { id: userId } });
       if (!user) throw new Error("Người dùng không tồn tại");
 
@@ -88,7 +89,6 @@ export class SignatureService {
 
       if (!masterHash)
         throw new Error("Hợp đồng chưa có giá trị hash để xác minh");
-      console.log(contract.signatures)
       // Nếu có chữ ký trước đó, cần verify từng chữ ký đó với publicKey của người ký tương ứng
       if (contract.signatures && contract.signatures.length > 0) {
         for (const existingSig of contract.signatures) {
@@ -193,12 +193,10 @@ export class SignatureService {
           "Xác thực chữ ký sau khi ký thất bại. Chữ ký không hợp lệ. Mọi thao tác đã được hủy bỏ."
         );
       }
-
       // Save signature & update recipient as before
-      console.log(contractId)
       const newSignature = signatureRepo.create({
-        contract: { id: contract.id },
-        user: { id: userId },
+        contract,
+        user,
         signatureAlgo: "RSA-PSS-SHA256",
         signatureHash,
         isValid,
@@ -270,12 +268,12 @@ export class SignatureService {
     signature.isValid = isValid;
     await this.signatureRepository.save(signature);
 
-    await this.auditService.createLog(
-      signature.user.id,
-      "VERIFY_SIGNATURE",
-      `Xác minh chữ ký ID ${signature.id} cho hợp đồng ${signature.contract.id} → ${isValid ? "Hợp lệ" : "Không hợp lệ hoặc file hợp đồng đã bị thay đổi"
-      }`
-    );
+    // await this.auditService.createLog(
+    //   signature.user.id,
+    //   "VERIFY_SIGNATURE",
+    //   `Xác minh chữ ký ID ${signature.id} cho hợp đồng ${signature.contract.id} → ${isValid ? "Hợp lệ" : "Không hợp lệ hoặc file hợp đồng đã bị thay đổi"
+    //   }`
+    // );
     return isValid;
   }
 
