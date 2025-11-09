@@ -52,11 +52,15 @@ export class ContractController {
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const list = await this.service.getAllContractsByCreateAndRecipient(userId);
+      const list = await this.service.getAllContractsByCreateAndRecipient(
+        userId
+      );
       return res.status(200).json(list);
     } catch (error: any) {
       console.error("Lỗi khi lấy hợp đồng:", error);
-      return res.status(500).json({ message: "Lỗi khi lấy danh sách hợp đồng" });
+      return res
+        .status(500)
+        .json({ message: "Lỗi khi lấy danh sách hợp đồng" });
     }
   }
 

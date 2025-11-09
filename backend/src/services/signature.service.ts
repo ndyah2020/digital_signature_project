@@ -7,7 +7,6 @@ import { ContractService } from "../services/contract.service";
 import { ContractRecipient, SignStatus } from "../entities/ContractRecipient";
 import { PendingSign } from "../entities/PendingSign";
 
-
 const crypto = require("crypto");
 export class SignatureService {
   private signatureRepository = AppDataSource.getRepository(Signature);
@@ -15,17 +14,13 @@ export class SignatureService {
   private auditService = new AuditLogService();
   private contractService = new ContractService();
   // ký hợp đồng
-  async signContract(
-    contractId: number,
-    userId: number,
-    password: string,
-  ) {
+  async signContract(contractId: number, userId: number, password: string) {
     return await AppDataSource.manager.transaction(async (tx) => {
       const contractRepo = tx.getRepository(Contract);
       const recipientRepo = tx.getRepository(ContractRecipient);
       const signatureRepo = tx.getRepository(Signature);
       const userRepo = tx.getRepository(User);
-      const pendingSignRepo = tx.getRepository(PendingSign)
+      const pendingSignRepo = tx.getRepository(PendingSign);
 
       const contract = await contractRepo.findOne({
         where: { id: contractId },
@@ -83,9 +78,13 @@ export class SignatureService {
       const masterHash = contract.hash;
       if (!contract.file_url) throw new Error("Hợp đồng gốc không tồn tại");
 
-      const cloudHash = await this.contractService.getDocumentAndHash(contract.file_url);
+      const cloudHash = await this.contractService.getDocumentAndHash(
+        contract.file_url
+      );
       if (masterHash !== cloudHash) {
-        throw new Error("Phát hiện file hợp đồng trên cloud đã bị thay đổi... hoăc lỗi lấy dữ liệu");
+        throw new Error(
+          "Phát hiện file hợp đồng trên cloud đã bị thay đổi... hoăc lỗi lấy dữ liệu"
+        );
       }
 
       if (!masterHash)
@@ -197,8 +196,8 @@ export class SignatureService {
 
       // Save signature & update recipient as before
       const newSignature = signatureRepo.create({
-        contract: { id: contractId } as Contract,
-        user: { id: userId } as User,
+        contract: contract,
+        user: user,
         signatureAlgo: "RSA-PSS-SHA256",
         signatureHash,
         isValid,
@@ -230,14 +229,15 @@ export class SignatureService {
           `Hợp đồng #${contractId} đã được ký đầy đủ.`
         );
       }
-      
+
       // xóa bảng ghi xác thực otp sau khi ký thành công
       await pendingSignRepo.delete(pendingSign.id);
 
       await this.auditService.createLog(
         userId,
         "SIGN_CONTRACT",
-        `Người dùng ${user.name} ký hợp đồng ID ${contractId} (${isValid ? "Hợp lệ" : "Không hợp lệ"
+        `Người dùng ${user.name} ký hợp đồng ID ${contractId} (${
+          isValid ? "Hợp lệ" : "Không hợp lệ"
         })`
       );
 
@@ -248,7 +248,6 @@ export class SignatureService {
       };
     });
   }
-
 
   // xác minh chữ ký số
   async verifySignature(signature: Signature, documentHashFromCloud: string) {
@@ -305,7 +304,7 @@ export class SignatureService {
           publicKey: true,
         },
         signatureHash: true,
-        isValid: true
+        isValid: true,
       },
       order: { signedAt: "DESC" },
     });
@@ -324,7 +323,7 @@ export class SignatureService {
     if (!recipients) {
       throw new Error("Không tìm thấy hợp đồng");
     }
-    const access = recipients.some(recipient => recipient.userId === userId);
+    const access = recipients.some((recipient) => recipient.userId === userId);
     return access;
   }
 }
