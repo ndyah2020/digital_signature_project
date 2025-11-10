@@ -234,6 +234,7 @@ export class SignatureService {
       });
 
       if (pendingCount === 0 && failedCount === 0) {
+        // Không đụng vào entity contract → không gây detach ;An toàn với race condition
         await contractRepo.update(contractId, {
           status: ContractStatus.SIGNED,
           updatedAt: new Date(),
