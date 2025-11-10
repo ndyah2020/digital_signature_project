@@ -27,9 +27,8 @@ const Contracts: React.FC = () => {
   const [selectedContract, setSelectedContract] = useState<ContractDataType | null>(null);
 
 
-
   const { mutate: createMutate, isLoading: isCreating } = useCreateContract();
-  const { mutate: updateMutate, isLoading: isUpdating } = useUpdateContract();
+  const { mutate: updateMutate } = useUpdateContract();
   const { mutate: mutateStatus, isLoading: isUpdatingStatus } = useUpdateContractStatus();
 
 
@@ -54,6 +53,11 @@ const Contracts: React.FC = () => {
     }
   };
 
+
+  const handleCheckSigned = (contract: ContractDataType): boolean => {
+    return contract.recipientLinks.length > 0 &&
+      contract.recipientLinks.every(sign => sign.sign_status === "signed");
+  }
 
   const columns = [{
     id: 'id',
@@ -146,7 +150,8 @@ const Contracts: React.FC = () => {
             </button>
 
             <button
-              className="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+              className="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-75 disabled:cursor-not-allowed"
+              disabled={handleCheckSigned(contract)}
               onClick={() => {
                 setisAssignerOpen(true);
                 setSelectedContract(contract);

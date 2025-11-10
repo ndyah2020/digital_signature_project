@@ -103,12 +103,18 @@ export class ContractService {
         description: true,
         file_url: true,
         createdAt: true,
-        hash: true,
         status: true,
         createdBy: {
           name: true,
           email: true,
         },
+        recipientLinks: {
+          sign_status: true,
+          user: {
+            name: true,
+            email: true,
+          }
+        }
       },
     });
   }
@@ -383,6 +389,15 @@ export class ContractService {
         "Chỉ admin hoặc người tạo hợp đồng được phép gán người ký"
       );
     }
+
+    const recipientSigned = await this.recipientRepository.findOne({
+      where: {
+        contractId,
+        sign_status: SignStatus.SIGNED
+      },
+    })
+    if(recipientSigned) throw new Error("Không thể gán hợp đồng vì đã được ký từ người gán")
+    
     // Xoá các recipient cũ
     // await this.recipientRepository.delete({ contract: { id: contractId } });
     const deleteResult = await this.recipientRepository.delete({

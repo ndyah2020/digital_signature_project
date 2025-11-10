@@ -1,5 +1,4 @@
 import { AssignerType } from "./assigner.type";
-import { UserData } from "./auth.type";
 import { SignatureType } from "./signature.type";
 
 export interface ContractType {
