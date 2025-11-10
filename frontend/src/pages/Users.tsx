@@ -1,7 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { Edit, Trash2 } from 'lucide-react';
 import DataTable from '../components/DataTable';
-import { useToast } from '../components/ui/use-toast';
 import { formatDate } from '../utils/helpers';
 import useFetch from '../hooks/useFetch';
 import { UserData } from '../type/auth.type';

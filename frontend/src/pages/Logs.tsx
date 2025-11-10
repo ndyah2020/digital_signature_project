@@ -1,15 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { ClipboardList, Download } from 'lucide-react';
 import DataTable from '../components/DataTable';
-import { useToast } from '../components/ui/use-toast';
 import { formatDate } from '../utils/helpers';
 import useFetch from '../hooks/useFetch';
 import { AuditLogType } from '../type/auditLog.type';
 const Logs: React.FC = () => {
-  const { toast } = useToast();
+  
   const { data: auditLog, loading: isAuditLog } = useFetch<AuditLogType[]>("/audit-logs");
-
-
   const translateAction = (action: string): string => {
     const actionMap: Record<string, string> = {
       CREATE_CONTRACT: 'Tạo hợp đồng',
