@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, User, Loader2, Search, Trash2 } from 'lucide-react';
 import { useToast } from '../components/ui/use-toast';
 import { ContractDataType } from '../type/contract.type';
-import { UserData } from '../type/auth';
+import { UserData } from '../type/auth.type';
 
 import { useAddRecipient } from '../api/contract.api';
 import { findUserByEmail } from '../api/user.api';

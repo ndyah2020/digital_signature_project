@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useEffect, useState } from "react";
 import { api } from "../utils/api";
-import { User } from "../type/auth";
+import { User } from "../type/auth.type";
 import { jwtDecode } from "jwt-decode";
 
 

@@ -20,15 +20,30 @@ export class AuditLogService {
     return log;
   }
 
-  async getLogs(filter?: { userId?: number; action?: string }) {
+  async getLogs(filter?: { userId?: number; action?: string; limit?: number }) {
     const where: any = {};
     if (filter?.userId) where.user = { id: filter.userId };
     if (filter?.action) where.action = filter.action;
 
+    const take = filter?.limit;
+
     return await this.auditRepository.find({
       where,
       relations: ["user"],
+      select: {
+        id: true,
+        user: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+        },
+        action: true,
+        details: true,
+        createdAt: true,
+      },
       order: { createdAt: "DESC" },
+      take, 
     });
   }
 

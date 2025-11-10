@@ -2,7 +2,7 @@ import { api } from "../utils/api";
 import { useToast } from "../components/ui/use-toast";
 import { ContractDataType, ContractType, ContractUpdateType } from "../type/contract.type";
 import { useMutation } from "../hooks/useMutation";
-import { AssignPartyVariables } from "../type/assigner";
+import { AssignPartyVariables } from "../type/assigner.type";
 
 
 const createContract = async (payload: ContractType): Promise<ContractDataType> => {

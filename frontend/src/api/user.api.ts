@@ -1,4 +1,4 @@
-import {UserData} from "../type/auth";
+import {UserData} from "../type/auth.type";
 import { api } from "../utils/api";
 
 export const findUserByEmail = async (email: string): Promise<UserData> => {

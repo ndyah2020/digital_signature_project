@@ -10,7 +10,7 @@ import { useVerifyContractApi, VerificationStatus } from '../hooks/useVerifyHash
 import { useViewContract } from '../api/contract.api';
 import { useCheckSigner } from '../api/singnature.api';
 import { useAuth } from '../hooks/useAuth';
-import { SignatureType } from '../type/signature';
+import { SignatureType } from '../type/signature.type';
 import { RecipientType } from '../type/recipient.type';
 
 
