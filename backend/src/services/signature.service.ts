@@ -203,7 +203,7 @@ export class SignatureService {
         isValid,
       });
       await signatureRepo.save(newSignature);
-      
+
       // Nếu là recipient, cập nhật sign_status và signed_at
       if (isRecipient) {
         link.sign_status = isValid ? SignStatus.SIGNED : SignStatus.FAILED;
@@ -238,8 +238,7 @@ export class SignatureService {
       await this.auditService.createLog(
         userId,
         "SIGN_CONTRACT",
-        `Người dùng ${user.name} ký hợp đồng ID ${contractId} (${
-          isValid ? "Hợp lệ" : "Không hợp lệ"
+        `Người dùng ${user.name} ký hợp đồng ID ${contractId} (${isValid ? "Hợp lệ" : "Không hợp lệ"
         })`
       );
 
@@ -252,15 +251,12 @@ export class SignatureService {
   }
 
   // xác minh chữ ký số
-  async verifySignature(signature: Signature, documentHashFromCloud: string) {
+  private async verifySignature(signature: Signature, documentHashFromCloud: string) {
     if (!signature) throw new Error("Không tìm thấy chữ ký");
 
-    // tạo verifier với file hợp đồng vừa hash
     const verifier = crypto.createVerify("RSA-SHA256");
     verifier.update(documentHashFromCloud);
     verifier.end();
-
-    // tiến hành giải mã chữ ký và xác thực hợp đồng tải về so với hợp đồng hash trong chữ ký
     const isValid = verifier.verify(
       {
         key: signature.user.publicKey,
@@ -273,13 +269,24 @@ export class SignatureService {
     signature.isValid = isValid;
     await this.signatureRepository.save(signature);
 
-    // await this.auditService.createLog(
-    //   signature.user.id,
-    //   "VERIFY_SIGNATURE",
-    //   `Xác minh chữ ký ID ${signature.id} cho hợp đồng ${signature.contract.id} → ${isValid ? "Hợp lệ" : "Không hợp lệ hoặc file hợp đồng đã bị thay đổi"
-    //   }`
-    // );
+    await this.auditService.createLog(
+      signature.user.id,
+      "VERIFY_SIGNATURE",
+      `Xác minh chữ ký ID ${signature.id} của ${signature.user.name} → ${isValid ? "Hợp lệ" : "Không hợp lệ hoặc file hợp đồng đã bị thay đổi"
+      }`
+    );
     return isValid;
+  }
+
+  async verifySignatures(signatures: Signature[], url_contract: string) {
+    const couldHash = await this.contractService.getDocumentAndHash(url_contract);
+
+    const verificationPromises = signatures.map(signature => {
+      return this.verifySignature(signature, couldHash);
+    });
+    
+    const results = await Promise.all(verificationPromises);
+    return results.every(isValid => isValid === true);
   }
 
   async getSignatureById(signatureId: number) {

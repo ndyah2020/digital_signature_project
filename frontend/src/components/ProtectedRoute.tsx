@@ -23,8 +23,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  // Check if user has required role
-  console.log(user?.role)
   if (requiredRole && user?.role !== requiredRole && user?.role !== 'admin') {
     return <div className="flex h-screen flex-col items-center justify-center">
         <h1 className="text-3xl font-bold">Không có quyền truy cập</h1>

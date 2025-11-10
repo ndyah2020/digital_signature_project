@@ -1,6 +1,6 @@
 import { useToast } from "../components/ui/use-toast";
 import { useMutation } from "../hooks/useMutation";
-import { SignPayload, SignResponse } from "../type/signature.type";
+import { SignatureType, SignPayload, SignResponse } from "../type/signature.type";
 import { api } from "../utils/api";
 
 interface CheckSignerVars {
@@ -17,6 +17,20 @@ const signContract = async (payload: SignPayload): Promise<SignResponse> => {
   const res = await api.post("/signatures/sign", payload);
   return res.data;
 };
+
+interface VerifySignature {
+  signatures: SignatureType[],
+  url_contract: string,
+}
+
+interface ResponseApi {
+  message: string,
+  access: boolean
+}
+const verifySignatures = async(data: VerifySignature) : Promise<ResponseApi> => {
+  const res = await api.post('/signatures/verify', data)
+  return res.data
+}
 
 export const useSignature = () => {
   const { toast } = useToast();
@@ -77,3 +91,23 @@ export const useCheckSigner = () => {
     },
   });
 };
+
+export const useVerifySignatures = () => {
+  const { toast } = useToast();
+  return useMutation<ResponseApi, VerifySignature>(verifySignatures, {
+    onSuccess: (data) => {
+      console.log(data.message)
+      toast({
+          title: "Xác thực thành công",
+          description: !data.message || `Các chữ ký hợp lệ.`
+      });
+    },
+    onError:(error) => {
+      console.error(error.message)
+      toast({
+          title: "Xác thực thất bại",
+          description: !error.message ||"Có một chữ ký không hợp lệ.",
+      });
+    }
+  })
+}

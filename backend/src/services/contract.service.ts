@@ -297,6 +297,7 @@ export class ContractService {
             id: true,
             name: true,
             email: true,
+            publicKey: true,
           },
         },
         recipientLinks: {
