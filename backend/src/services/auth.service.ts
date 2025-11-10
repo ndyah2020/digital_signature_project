@@ -53,7 +53,7 @@ export class AuthService {
 
     // trả về otpauth_url để client hiển thị QR code (nếu muốn user enable 2FA)
     return {
-      token: signToken({ sub: user.id, email: user.email, role: user.role }),
+      token: signToken({ sub: user.id, email: user.email,  name: user.name, role: user.role }),
       user: {
         id: user.id,
         name: user.name,
@@ -78,6 +78,7 @@ export class AuthService {
     const token = signToken({
       sub: user.id,
       email: user.email,
+      name: user.name,
       role: user.role,
     });
     return {

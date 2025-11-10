@@ -9,9 +9,17 @@ export class UserService {
   private contractRepository = AppDataSource.getRepository(Contract);
   // lấy tất cả người dùng
   async getAllUsers(): Promise<User[]> {
-    return await this.userRepository.find();
+    return await this.userRepository.find({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        createdAt: true,
+        role: true,
+      }
+    });
   }
-  // Lấy thông tin người dùng theo ID
+
   async getUserById(userId: number): Promise<User | null> {
     return await this.userRepository.findOne({ where: { id: userId } });
   }

@@ -8,6 +8,13 @@ export class UserController {
   // [GET] /users
   async getAllUsers(req: Request, res: Response) {
     try {
+      const user = req.user;
+      if (user.role !== "admin") {
+        return res.status(400).json({
+          message: "Bạn không có quyền xem thông tin người dùng",
+          access: false,
+        })
+      }
       const users = await this.userService.getAllUsers();
       return res.json(users);
     } catch (error: any) {

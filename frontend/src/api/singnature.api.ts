@@ -1,6 +1,6 @@
 import { useToast } from "../components/ui/use-toast";
 import { useMutation } from "../hooks/useMutation";
-import { SignPayload, SignResponse } from "../type/signature";
+import { SignPayload, SignResponse } from "../type/signature.type";
 import { api } from "../utils/api";
 
 interface CheckSignerVars {

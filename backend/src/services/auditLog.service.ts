@@ -28,6 +28,18 @@ export class AuditLogService {
     return await this.auditRepository.find({
       where,
       relations: ["user"],
+      select: {
+        id: true,
+        user: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+        },
+        action: true,
+        details: true,
+        createdAt: true,
+      },
       order: { createdAt: "DESC" },
     });
   }

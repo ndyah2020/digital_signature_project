@@ -1,4 +1,4 @@
-import { UserData } from "./auth";
+import { UserData } from "./auth.type";
 
 export interface AssignerType {
     sign_status: string,
