@@ -49,10 +49,8 @@ export class AuthService {
       isTotpEnabled: false,
     });
 
-    // await this.userRepo.save(user);
-    // ...existing code...
-    const savedUser = await this.userRepo.save(user);
-    console.log("Saved user:", savedUser);
+    await this.userRepo.save(user);
+
     // ...existing code...
 
     // trả về otpauth_url để client hiển thị QR code (nếu muốn user enable 2FA)

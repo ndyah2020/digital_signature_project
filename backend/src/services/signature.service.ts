@@ -194,12 +194,6 @@ export class SignatureService {
         );
       }
 
-      console.log(
-        "[signContract] BEFORE SAVE: contract.id =",
-        contract?.id,
-        "user.id =",
-        user?.id
-      );
       // Save signature & update recipient as before
       const newSignature = signatureRepo.create({
         contract: { id: contractId } as Contract,
@@ -208,16 +202,8 @@ export class SignatureService {
         signatureHash,
         isValid,
       });
-      //await signatureRepo.save(newSignature);
-      const savedSignature = await signatureRepo.save(newSignature);
-      console.log(
-        "[signContract] savedSignature:",
-        savedSignature.id,
-        "contractId:",
-        savedSignature.contract?.id,
-        "userId:",
-        savedSignature.user?.id
-      );
+      await signatureRepo.save(newSignature);
+      
       // Nếu là recipient, cập nhật sign_status và signed_at
       if (isRecipient) {
         link.sign_status = isValid ? SignStatus.SIGNED : SignStatus.FAILED;
