@@ -135,23 +135,34 @@ export class ContractService {
           reject(new Error(`Lỗi khi đọc stream file: ${err.message}`));
         });
       });
-
     } catch (error: any) {
-      console.error(`[getDocumentAndHash] Lỗi gốc khi tải từ Cloudinary:`, error.message);
+      console.error(
+        `[getDocumentAndHash] Lỗi gốc khi tải từ Cloudinary:`,
+        error.message
+      );
 
       if (axios.isAxiosError(error)) {
         if (error.response) {
           const status = error.response.status;
           if (status === 404) {
-            throw new Error(`File gốc trên Cloudinary không tồn tại (404). URL: ${file_url}`);
+            throw new Error(
+              `File gốc trên Cloudinary không tồn tại (404). URL: ${file_url}`
+            );
           }
           if (status === 401 || status === 403) {
-            throw new Error(`Không có quyền truy cập file trên Cloudinary (Lỗi ${status}). URL: ${file_url}`);
+            throw new Error(
+              `Không có quyền truy cập file trên Cloudinary (Lỗi ${status}). URL: ${file_url}`
+            );
           }
-          throw new Error(`Không thể tải file hợp đồng. Cloudinary trả về lỗi HTTP ${status}.`);
-        }
-        else if (error.request) {
-          throw new Error(`Lỗi mạng khi tải file (${error.code || 'ECONNRESET'}). Không nhận được phản hồi.`);
+          throw new Error(
+            `Không thể tải file hợp đồng. Cloudinary trả về lỗi HTTP ${status}.`
+          );
+        } else if (error.request) {
+          throw new Error(
+            `Lỗi mạng khi tải file (${
+              error.code || "ECONNRESET"
+            }). Không nhận được phản hồi.`
+          );
         }
       }
       throw new Error(`Không thể tải file hợp đồng. Message: ${error.message}`);
@@ -175,7 +186,7 @@ export class ContractService {
         throw new Error("404: Không tìm thấy file URL của hợp đồng này.");
       }
 
-      const calculatedHash = await this.getDocumentAndHash(fileUrl)
+      const calculatedHash = await this.getDocumentAndHash(fileUrl);
 
       if (calculatedHash === storedHash) {
         return { status: "verified", message: "File toàn vẹn." };
@@ -203,7 +214,7 @@ export class ContractService {
             );
             const errorJson = JSON.parse(errorDataString);
             errorBody = errorJson.error?.message || errorBody;
-          } catch (e) { }
+          } catch (e) {}
 
           if (
             errorBody.includes("untrusted customer") ||
@@ -294,6 +305,11 @@ export class ContractService {
         },
       },
     });
+    console.log("Found contract recipients:", contract?.recipientLinks?.length);
+    console.log(
+      "Recipients:",
+      JSON.stringify(contract?.recipientLinks, null, 2)
+    );
 
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
 
@@ -334,19 +350,24 @@ export class ContractService {
       onExpireAction?: "cancel" | "remove" | "extend";
     }>
   ) {
+    console.log("Assigning contract:", {
+      contractId,
+      senderId,
+      recipientItems,
+    });
     const contract = await this.contractRepository.findOne({
       where: { id: contractId },
       relations: ["createdBy"],
       select: {
         id: true,
         createdBy: {
-          id: true
+          id: true,
         },
         createdAt: true,
         status: true,
-      }
+      },
     });
-    
+
     if (!contract) throw new Error("Không tìm thấy hợp đồng");
 
     const actor = await this.userRepository.findOne({
@@ -364,7 +385,11 @@ export class ContractService {
       );
     }
     // Xoá các recipient cũ
-    await this.recipientRepository.delete({ contract: { id: contractId } });
+    // await this.recipientRepository.delete({ contract: { id: contractId } });
+    const deleteResult = await this.recipientRepository.delete({
+      contract: { id: contractId },
+    });
+    console.log("Deleted old recipients:", deleteResult);
 
     const recipients = recipientItems.map(
       ({ userId, deadlineDays, onExpireAction }) => {
@@ -386,7 +411,9 @@ export class ContractService {
       }
     );
 
-    await this.recipientRepository.save(recipients);
+    //await this.recipientRepository.save(recipients);
+    const savedRecipients = await this.recipientRepository.save(recipients);
+    console.log("Saved new recipients:", savedRecipients);
 
     if (contract.status === ContractStatus.DRAFT)
       contract.status = ContractStatus.PENDING;

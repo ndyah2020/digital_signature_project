@@ -22,7 +22,7 @@ export class SignatureService {
       const userRepo = tx.getRepository(User);
       const pendingSignRepo = tx.getRepository(PendingSign);
 
-      const contract = await contractRepo.findOne({
+      const contract = await tx.getRepository(Contract).findOne({
         where: { id: contractId },
         relations: ["signatures", "signatures.user"],
         cache: false, // ← BẮT BUỘC
@@ -40,7 +40,7 @@ export class SignatureService {
         },
       });
 
-      if (!pendingSign) {
+      if (!pendingSign?.isVerified) {
         throw new Error(
           "Xác thực ký không hợp lệ. Bạn cần xác thực OTP qua email trước."
         );
@@ -194,16 +194,30 @@ export class SignatureService {
         );
       }
 
+      console.log(
+        "[signContract] BEFORE SAVE: contract.id =",
+        contract?.id,
+        "user.id =",
+        user?.id
+      );
       // Save signature & update recipient as before
       const newSignature = signatureRepo.create({
-        contract: contract,
+        contract: { id: contractId } as Contract,
         user: user,
         signatureAlgo: "RSA-PSS-SHA256",
         signatureHash,
         isValid,
       });
-      await signatureRepo.save(newSignature);
-
+      //await signatureRepo.save(newSignature);
+      const savedSignature = await signatureRepo.save(newSignature);
+      console.log(
+        "[signContract] savedSignature:",
+        savedSignature.id,
+        "contractId:",
+        savedSignature.contract?.id,
+        "userId:",
+        savedSignature.user?.id
+      );
       // Nếu là recipient, cập nhật sign_status và signed_at
       if (isRecipient) {
         link.sign_status = isValid ? SignStatus.SIGNED : SignStatus.FAILED;
@@ -220,9 +234,10 @@ export class SignatureService {
       });
 
       if (pendingCount === 0 && failedCount === 0) {
-        contract.status = ContractStatus.SIGNED;
-        contract.updatedAt = new Date();
-        await contractRepo.save(contract);
+        await contractRepo.update(contractId, {
+          status: ContractStatus.SIGNED,
+          updatedAt: new Date(),
+        });
         await this.auditService.createLog(
           userId,
           "CONTRACT_FULLY_SIGNED",

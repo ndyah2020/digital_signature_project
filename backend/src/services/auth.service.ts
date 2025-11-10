@@ -38,7 +38,7 @@ export class AuthService {
     // Bạn có thể mã hoá totpSecret.base32 trước khi lưu (recommended)
     const totpSecretToStore = totpSecret.base32; // => consider encrypt before saving
 
-    const user = this.userRepo.create({
+    const user = await this.userRepo.create({
       name,
       email,
       passwordHash,
@@ -49,7 +49,11 @@ export class AuthService {
       isTotpEnabled: false,
     });
 
-    await this.userRepo.save(user);
+    // await this.userRepo.save(user);
+    // ...existing code...
+    const savedUser = await this.userRepo.save(user);
+    console.log("Saved user:", savedUser);
+    // ...existing code...
 
     // trả về otpauth_url để client hiển thị QR code (nếu muốn user enable 2FA)
     return {
