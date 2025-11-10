@@ -7,7 +7,7 @@ import { AuditLogService } from "../services/auditLog.service";
 import { User, UserRole } from "../entities/User";
 import { ContractRecipient, SignStatus } from "../entities/ContractRecipient";
 import { Response } from "express";
-import { Signature } from "../entities/Signature";
+
 
 const fs = require("fs");
 const crypto = require("crypto");
@@ -17,7 +17,6 @@ export class ContractService {
   private userRepository = AppDataSource.getRepository(User);
   private contractRepository = AppDataSource.getRepository(Contract);
   private auditLogService = new AuditLogService();
-  private signRepository = AppDataSource.getRepository(Signature);
 
   async createContract(
     file: import("multer").File,
