@@ -1,4 +1,16 @@
+-- Tạo database
 
+-- CREATE DATABASE "signature_db"
+--     WITH
+--     OWNER = "signature_db"
+--     ENCODING = 'UTF8'
+--     LC_COLLATE = 'en_US.utf8'
+--     LC_CTYPE = 'en_US.utf8'
+--     LOCALE_PROVIDER = 'libc'
+--     TABLESPACE = pg_default
+--     CONNECTION LIMIT = -1
+--     IS_TEMPLATE = False;
+-- \c signature_db; -- kết nối db khi dùng psql
 -- người dùng hệ thống
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,

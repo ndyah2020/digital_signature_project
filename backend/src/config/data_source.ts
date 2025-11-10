@@ -20,5 +20,12 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || "signature_db",
   synchronize: true,
   logging: false,
-  entities: [User, Contract, Signature, AuditLog, ContractRecipient, PendingSign],
+  entities: [
+    User,
+    Contract,
+    Signature,
+    AuditLog,
+    ContractRecipient,
+    PendingSign,
+  ],
 });
