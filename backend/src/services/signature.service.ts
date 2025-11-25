@@ -278,20 +278,34 @@ export class SignatureService {
   }
 
   async verifySignatures(signatures: Signature[], url_contract: string) {
-    const couldHash = await this.contractService.getDocumentAndHash(url_contract);
-    if(signatures.length <= 0) {
-       throw new Error("Chưa có người ký để xác thực");
+    let couldHash: string;
+    try {
+      couldHash = await this.contractService.getDocumentAndHash(url_contract);
+      if (!couldHash) {
+        throw new Error("Không lấy được hash file gốc");
+      }
+    } catch (error: any) {
+      console.error("Lỗi xác thực hash, tiến hành vô hiệu hóa chữ ký:", error.message);
+      if (signatures.length > 0) {
+        signatures.forEach(sig => sig.isValid = false);
+        await this.signatureRepository.save(signatures);
+        console.log(`Đã cập nhật isValid = false cho ${signatures.length} chữ ký.`);
+      }
+      throw new Error("Không thể lấy được file trên cloud");
     }
 
-
+    if (signatures.length <= 0) {
+      throw new Error("Chưa có người ký để xác thực");
+    }
 
     const verificationPromises = signatures.map(signature => {
       return this.verifySignature(signature, couldHash);
     });
-    
+
     const results = await Promise.all(verificationPromises);
     return results.every(isValid => isValid === true);
   }
+
 
   async getSignatureById(signatureId: number) {
     return await this.signatureRepository.findOne({
@@ -330,13 +344,20 @@ export class SignatureService {
   }
 
   async checkSigner(userId: number, contractId: number) {
-    const recipients = await this.recipientRepository.find({
-      where: { contractId },
+    const recipient = await this.recipientRepository.findOne({
+      where: {
+        contractId,
+        userId,
+      },
     });
-    if (!recipients) {
-      throw new Error("Không tìm thấy hợp đồng");
+    if (!recipient) {
+      throw new Error(`Bạn không có quyền truy cập hợp đồng này`);
     }
-    const access = recipients.some((recipient) => recipient.userId === userId);
-    return access;
+
+    if (recipient?.sign_status === SignStatus.SIGNED) {
+      throw new Error("Bạn đã ký hợp đồng này")
+    }
+
+    if (recipient) return true;
   }
 }

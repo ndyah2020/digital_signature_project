@@ -66,26 +66,18 @@ export const useCheckSigner = () => {
   const { toast } = useToast();
   return useMutation<boolean, CheckSignerVars>(checkSigner, {
     onSuccess: (data, variables) => {
-      if (data) {
-        toast({
+     toast({
           title: "Xác thực thành công",
           description: `Bạn hợp lệ cho hợp đồng #${variables.contractName}.`,
-        });
-      } else {
-        toast({
-          title: "Xác thực thất bại",
-          description: "Người dùng không có quyền ký hợp đồng này.",
-          variant: "destructive",
-        });
-      }
+      });
     },
     onError: (error) => {
       console.error(  
         error.message
       );
       toast({
-        title: "Lỗi kiểm tra quyền ký",
-        description: "Không thể xác thực người dùng. Vui lòng thử lại sau.",
+        title: "Lỗi kiểm tra ký",
+        description: error.message || "Lỗi kiểm tra",
         variant: "destructive",
       });
     },
@@ -98,7 +90,7 @@ export const useVerifySignatures = () => {
     onSuccess: (data) => {
       console.log(data.message)
       toast({
-          title: "Xác thực thành công",
+          title: "Kết quả xác thực",
           description: data.message || `Các chữ ký hợp lệ.`
       });
     },
