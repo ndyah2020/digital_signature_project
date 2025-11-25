@@ -36,6 +36,7 @@ CREATE TABLE contracts (
     file_url TEXT,
     file_type VARCHAR(20),
     file_size BIGINT,
+    public_id VARCHAR(255) NOT NULL,
     hash TEXT,  -- SHA-256 hash của nội dung hợp đồng
     status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'pending', 'signed', 'cancelled')),
     created_by INT,

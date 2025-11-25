@@ -43,6 +43,9 @@ export class Contract {
   @Column({ name: "file_size", type: "bigint", nullable: true })
   fileSize: number | null;
 
+  @Column({ name: 'public_id', type: 'varchar', length: 255 }) 
+  public_id: string | null;
+
   @Column({ type: "text", nullable: true })
   hash: string | null;
 

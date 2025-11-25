@@ -50,11 +50,13 @@ export class SignatureController {
         access: result,
         message: result ? "Chữ ký hợp lệ" : "Chữ ký không hợp lệ",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Lỗi khi xác minh chữ ký:", error);
-      return res.status(400).json({ message: error.message, access: false });
+      const message = error instanceof Error ? error.message : "Unknown error occurred";
+      return res.status(500).json({ message, access: false });
     }
   }
+
 
   // GET /signatures/:contractId
   async getSignaturesByContract(req: Request, res: Response) {

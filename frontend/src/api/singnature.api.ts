@@ -99,14 +99,14 @@ export const useVerifySignatures = () => {
       console.log(data.message)
       toast({
           title: "Xác thực thành công",
-          description: !data.message || `Các chữ ký hợp lệ.`
+          description: data.message || `Các chữ ký hợp lệ.`
       });
     },
     onError:(error) => {
-      console.error(error.message)
+      console.error(error)
       toast({
           title: "Xác thực thất bại",
-          description: !error.message ||"Có một chữ ký không hợp lệ.",
+          description: error.message ||"Có một chữ ký không hợp lệ.",
       });
     }
   })

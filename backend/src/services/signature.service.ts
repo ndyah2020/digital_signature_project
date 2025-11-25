@@ -253,7 +253,6 @@ export class SignatureService {
   // xác minh chữ ký số
   private async verifySignature(signature: Signature, documentHashFromCloud: string) {
     if (!signature) throw new Error("Không tìm thấy chữ ký");
-
     const verifier = crypto.createVerify("RSA-SHA256");
     verifier.update(documentHashFromCloud);
     verifier.end();
@@ -280,6 +279,11 @@ export class SignatureService {
 
   async verifySignatures(signatures: Signature[], url_contract: string) {
     const couldHash = await this.contractService.getDocumentAndHash(url_contract);
+    if(signatures.length <= 0) {
+       throw new Error("Chưa có người ký để xác thực");
+    }
+
+
 
     const verificationPromises = signatures.map(signature => {
       return this.verifySignature(signature, couldHash);

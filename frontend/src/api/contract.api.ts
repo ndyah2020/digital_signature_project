@@ -93,7 +93,7 @@ export const useUpdateContract = () => {
     {
       onSuccess: () => {
         toast({
-          title: "✅ Cập nhật hợp đồng thành công!",
+          title: "Cập nhật hợp đồng thành công!",
           description: "Thông tin hợp đồng đã được cập nhật.",
         });
       },

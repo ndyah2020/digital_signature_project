@@ -41,9 +41,14 @@ const VerificationStatusBadge: React.FC<{ status: VerificationStatus; errorMessa
   }
   if (status === 'error') {
     return (
-      <span className="inline-flex items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
-        <XCircle className="mr-1 h-3 w-3" />
-        Lỗi xác thực: {errorMessage}
+      <span 
+        className="inline-flex max-w-xs items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800"
+        title={errorMessage || ''}
+      >
+        <XCircle className="mr-1 h-3 w-3 shrink-0" /> 
+        <span className="truncate">
+          Lỗi xác thực: {errorMessage}
+        </span>
       </span>
     );
   }

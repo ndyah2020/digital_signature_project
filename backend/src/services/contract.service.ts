@@ -24,6 +24,7 @@ export class ContractService {
     description: string,
     createdBy: number
   ) {
+    const timestamp = Date.now();
     const extension = path.extname(file.originalname);
     const baseName = path.basename(file.originalname, extension);
     const cleanBaseName = baseName
@@ -32,7 +33,7 @@ export class ContractService {
       .replace(/[^a-zA-Z0-9-]/g, "_")
       .replace(/_{2,}/g, "_");
 
-    const finalPublicId = `${cleanBaseName}${extension}`;
+    const finalPublicId = `${cleanBaseName}_${timestamp}${extension}`;
     const fileBuffer = fs.readFileSync(file.path);
     const hash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
 
@@ -57,6 +58,7 @@ export class ContractService {
       file_url: viewUrl,
       fileType: file.mimetype,
       fileSize: file.size,
+      public_id: result.public_id,
       hash,
       status: ContractStatus.DRAFT,
       createdBy: { id: createdBy },
@@ -68,6 +70,121 @@ export class ContractService {
       "CREATE_CONTRACT",
       `Tạo hợp đồng: ${title}`
     );
+    return contract;
+  }
+
+  async updateContract(
+    id: number,
+    file: import("multer").File,
+    title: string,
+    description: string,
+    createdBy: number
+  ) {
+    const contract = await this.contractRepository.findOne({
+      where: { id }
+    });
+    
+    if (!contract) {
+      throw new Error("Hợp đồng không tồn tại");
+    }
+
+    const recipients = await this.recipientRepository.find({
+      where: { contractId: id }
+    })
+
+    if (recipients.length > 0) {
+      throw new Error("Không thể chỉnh sửa vì hợp đồng đã được gán");
+    }
+
+    const recipientSigned = await this.recipientRepository.findOne({
+      where: {
+        contractId: id,
+        sign_status: SignStatus.SIGNED
+      },
+    })
+    if (recipientSigned) throw new Error("Không thể chỉnh sửa vì đã được ký")
+      
+   
+
+    let fileUrl = contract.file_url;
+    let fileType = contract.fileType;
+    let fileSize = contract.fileSize;
+    let hash = contract.hash;
+    let publicId = contract.public_id;
+    
+    if (file) {
+      if (contract.public_id) { 
+        try {
+            console.log("Đang xóa public_id:", contract.public_id); 
+            
+            const destroyResult = await cloudinary.uploader.destroy(contract.public_id, { 
+                resource_type: "raw", 
+                invalidate: true 
+            });
+            
+            if (destroyResult.result === 'ok') {
+                console.log(`Đã xóa thành công: ${contract.public_id}`);
+            } else {
+                console.warn(`Không xóa được file (Cloudinary báo: ${destroyResult.result}): ${contract.public_id}`);
+                throw new Error("Không xóa được file trên cloud")
+            }
+        } catch (error) {
+            console.error("Lỗi khi xóa file cũ trên Cloudinary:", error);
+            throw new Error("Lỗi khi xóa file cũ trên Cloudinary")
+        }
+      }
+
+      const extension = path.extname(file.originalname);
+      const baseName = path.basename(file.originalname, extension);
+       const timestamp = Date.now();
+      const cleanBaseName = baseName
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9-]/g, "_")
+        .replace(/_{2,}/g, "_");
+
+      const finalPublicId =  `${cleanBaseName}_${timestamp}${extension}`;
+   
+      // Tạo hash mới từ nội dung file
+      const fileBuffer = fs.readFileSync(file.path);
+      hash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
+
+      const result = await cloudinary.uploader.upload(file.path, {
+        resource_type: "raw",
+        folder: "contracts",
+        public_id: finalPublicId,
+        unique_filename: false,
+        use_filename: true,
+        overwrite: false,
+      });
+
+      fileUrl = result.secure_url.replace(
+        "/upload/",
+        `/upload/fl_attachment:${finalPublicId.split(".")[0]}/`
+      );
+
+      publicId = result.public_id;
+      fileType = file.mimetype;
+      fileSize = file.size;
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+    }
+    
+    contract.title = title;
+    contract.description = description;
+    contract.file_url = fileUrl;
+    contract.public_id = publicId;
+    contract.fileType = fileType;
+    contract.fileSize = fileSize;
+    contract.hash = hash;
+    contract.updatedAt = new Date();
+    
+    await this.contractRepository.save(contract);
+    await this.auditLogService.createLog(
+      createdBy,
+      "UPDATE_CONTRACT",
+      `Cập nhật hợp đồng: ${title}`
+    );
+
     return contract;
   }
 
@@ -164,8 +281,7 @@ export class ContractService {
           );
         } else if (error.request) {
           throw new Error(
-            `Lỗi mạng khi tải file (${
-              error.code || "ECONNRESET"
+            `Lỗi mạng khi tải file (${error.code || "ECONNRESET"
             }). Không nhận được phản hồi.`
           );
         }
@@ -219,7 +335,7 @@ export class ContractService {
             );
             const errorJson = JSON.parse(errorDataString);
             errorBody = errorJson.error?.message || errorBody;
-          } catch (e) {}
+          } catch (e) { }
 
           if (
             errorBody.includes("untrusted customer") ||
@@ -397,8 +513,8 @@ export class ContractService {
         sign_status: SignStatus.SIGNED
       },
     })
-    if(recipientSigned) throw new Error("Không thể gán hợp đồng vì đã được ký từ người gán")
-    
+    if (recipientSigned) throw new Error("Không thể gán hợp đồng vì đã được ký từ người gán")
+
     // Xoá các recipient cũ
     // await this.recipientRepository.delete({ contract: { id: contractId } });
     const deleteResult = await this.recipientRepository.delete({

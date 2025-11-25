@@ -31,4 +31,5 @@ export interface ContractUpdateType {
     title: string;
     description: string;
     file: File | null;
+    createdBy: number;
 }
