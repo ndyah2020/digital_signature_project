@@ -27,6 +27,23 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+
+-- hợp đồng hoặc tài liệu cần ký
+CREATE TABLE contracts (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    file_url TEXT,
+    file_type VARCHAR(20),
+    file_size BIGINT,
+    public_id VARCHAR(255) NOT NULL,
+    hash TEXT,  -- SHA-256 hash của nội dung hợp đồng
+    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'pending', 'signed', 'cancelled')),
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- bảng này dùng để kiểm tra rằng user đã xác mình otp chưa, do tách logic xác minh và ký riêng ra
 CREATE TABLE pending_signs (
     id SERIAL PRIMARY KEY,
@@ -41,20 +58,6 @@ CREATE TABLE pending_signs (
     CONSTRAINT fk_pending_signs_contract FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
 );
 
--- hợp đồng hoặc tài liệu cần ký
-CREATE TABLE contracts (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    file_url TEXT,
-    file_type VARCHAR(20),
-    file_size BIGINT,
-    hash TEXT,  -- SHA-256 hash của nội dung hợp đồng
-    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'pending', 'signed', 'cancelled')),
-    created_by INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 -- tạo bảng nối contracts <-> users
 CREATE TABLE contract_recipients (
   contract_id INT NOT NULL,

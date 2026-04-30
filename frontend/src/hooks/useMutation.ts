@@ -25,10 +25,17 @@ export function useMutation<TData = unknown, TVariables = unknown>(
         setData(result);
         options?.onSuccess?.(result, variables);
         return result;
-      } catch (err) {
-        setError(err as Error);
-        options?.onError?.(err as Error, variables);
-        throw err;
+      } catch (err: any) {
+        const message =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Đã xảy ra lỗi không xác định";
+        const normalizedError = new Error(message);
+
+        setError(normalizedError);
+        options?.onError?.(normalizedError, variables);
+
+        throw normalizedError;
       } finally {
         setIsLoading(false);
       }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Clock, CheckCircle, XCircle, Edit, Eye, Loader2, ShieldCheck, ShieldAlert, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, FileText, Clock, CheckCircle, XCircle, Edit, Eye, Loader2, ShieldCheck, ShieldAlert, ChevronUp, ChevronDown, BadgeCheck } from 'lucide-react';
 import { useToast } from '../components/ui/use-toast';
 import { formatDate } from '../utils/helpers';
 import SignatureDialog from '../components/SignatureDialog';
@@ -8,7 +8,7 @@ import { ContractDataType } from '../type/contract.type'
 import useFetch from '../hooks/useFetch'
 import { useVerifyContractApi, VerificationStatus } from '../hooks/useVerifyHash';
 import { useViewContract } from '../api/contract.api';
-import { useCheckSigner } from '../api/singnature.api';
+import { useCheckSigner, useVerifySignatures } from '../api/singnature.api';
 import { useAuth } from '../hooks/useAuth';
 import { SignatureType } from '../type/signature.type';
 import { RecipientType } from '../type/recipient.type';
@@ -41,9 +41,14 @@ const VerificationStatusBadge: React.FC<{ status: VerificationStatus; errorMessa
   }
   if (status === 'error') {
     return (
-      <span className="inline-flex items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
-        <XCircle className="mr-1 h-3 w-3" />
-        Lỗi xác thực: {errorMessage}
+      <span 
+        className="inline-flex max-w-xs items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800"
+        title={errorMessage || ''}
+      >
+        <XCircle className="mr-1 h-3 w-3 shrink-0" /> 
+        <span className="truncate">
+          Lỗi xác thực: {errorMessage}
+        </span>
       </span>
     );
   }
@@ -57,19 +62,20 @@ const ContractDetail: React.FC = () => {
   const [showViewer, setShowViewer] = useState(false);
   const { toast } = useToast();
 
-const { data: contract, loading, error, refetch: refetchContract } = useFetch<ContractDataType>(`/contracts/${id}`);
+  const { data: contract, loading, error, refetch: refetchContract } = useFetch<ContractDataType>(`/contracts/${id}`);
 
-const { status: verificationStatus, errorMessage: verificationError } = useVerifyContractApi(
-  contract?.id ? `/contracts/verify_contracts/${contract.id}` : null
-);
+  const { status: verificationStatus, errorMessage: verificationError } = useVerifyContractApi(
+    contract?.id ? `/contracts/verify_contracts/${contract.id}` : null
+  );
 
-const { data: recipient, refetch: refetchRecipient } = useFetch<RecipientType[]>(
-  contract?.id ? `/recipients/contract/${contract.id}/get-recipient` : ""
-);
+  const { data: recipient, refetch: refetchRecipient } = useFetch<RecipientType[]>(
+    contract?.id ? `/recipients/contract/${contract.id}/get-recipient` : ""
+  );
 
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const { mutate: viewContract, isLoading } = useViewContract();
   const { mutateAsync: checkSigner } = useCheckSigner();
+  const { mutate: verifySignature, isLoading: isValid} = useVerifySignatures();  
   const { user } = useAuth();
 
   if (loading) {
@@ -159,6 +165,13 @@ const { data: recipient, refetch: refetchRecipient } = useFetch<RecipientType[]>
     setExpandedSignatureId(prevId => (prevId === id ? null : id));
   };
 
+  const handleVerifySignatures = async () => {
+    const signatures = contract.signatures.map((sign:SignatureType) => sign)
+    const url_contract = contract.file_url;
+    await verifySignature( {signatures, url_contract});
+    refetchContract();
+    refetchRecipient();
+  }
 
   const getStatusBadge = () => {
     switch (contract.status) {
@@ -236,7 +249,8 @@ const { data: recipient, refetch: refetchRecipient } = useFetch<RecipientType[]>
 
           <button
             onClick={() => handleCheck()}
-            className="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            disabled={verificationStatus === 'mismatch' || verificationStatus === 'error'}
+            className="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FileText className="mr-2 h-4 w-4" />
             Ký hợp đồng
@@ -381,9 +395,9 @@ const { data: recipient, refetch: refetchRecipient } = useFetch<RecipientType[]>
 
                 <ul className="divide-y divide-gray-200">
                   {recipient.map((item) => (
-  
+
                     <li
-                      key={item.userId} 
+                      key={item.userId}
                       className="border-b border-gray-200 px-4 py-4 last:border-b-0 sm:px-6"
                     >
                       <div className="flex items-center justify-between">
@@ -396,14 +410,14 @@ const { data: recipient, refetch: refetchRecipient } = useFetch<RecipientType[]>
                             {item.user.email}
                           </p>
                         </div>
-          
+
                         <div className="text-right">
                           {item.sign_status === "signed" ? (
                             <>
                               <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-0.5 text-xs font-medium text-green-800">
                                 <CheckCircle className="mr-1 h-3 w-3" />
                                 Đã ký
-                              </span>                 
+                              </span>
                               {item.signed_at && (
                                 <p className="text-xs text-gray-500 mt-1">
                                   Ký lúc:{" "}
@@ -443,13 +457,22 @@ const { data: recipient, refetch: refetchRecipient } = useFetch<RecipientType[]>
             </div>
             <div className="col-span-1 space-y-6">
               <div className="overflow-hidden rounded-lg bg-white shadow">
-                <div className="px-4 py-5 sm:px-6">
+                <div className="flex items-center justify-between px-4 py-5 sm:px-6">
                   <h3 className="text-lg font-medium leading-6 text-gray-900">
                     Lịch sử chữ ký (Đã xác minh)
                   </h3>
+
+                  <button
+                    onClick={handleVerifySignatures}
+                    className="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                  >
+                    <BadgeCheck className="mr-2 h-4 w-4" />
+                    {isValid ? 'Đang xác minh ...' : 'Xác minh các chữ ký '}
+                    
+                  </button>
                 </div>
 
-                <div className="border-t border-gray-200">                
+                <div className="border-t border-gray-200">
                   {contract.signatures && contract.signatures.length > 0 ? (
                     <ul className="divide-y divide-gray-200">
                       {contract.signatures.map((signature: SignatureType) => (

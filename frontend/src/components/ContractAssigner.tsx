@@ -96,18 +96,10 @@ const ContractAssigner: React.FC<ContractAssignerProps> = ({
           onExpireAction: u.onExpireAction,
         })),
       });
-      toast({
-        title: 'Gán thành công!',
-        description: `Đã gán ${foundUsers.length} người vào hợp đồng.`,
-      });
       onAssignSuccess();
       onClose();
     } catch (err: any) {
-      toast({
-        title: 'Lỗi khi gán',
-        description: err.response?.data?.message || err.message || 'Không thể gán người dùng.',
-        variant: 'destructive',
-      });
+      console.log(err.message || "Không thể thêm người dùng") 
     }
   };
 

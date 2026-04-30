@@ -27,9 +27,8 @@ const Contracts: React.FC = () => {
   const [selectedContract, setSelectedContract] = useState<ContractDataType | null>(null);
 
 
-
   const { mutate: createMutate, isLoading: isCreating } = useCreateContract();
-  const { mutate: updateMutate, isLoading: isUpdating } = useUpdateContract();
+  const { mutate: updateMutate, isLoading: isUpdate} = useUpdateContract();
   const { mutate: mutateStatus, isLoading: isUpdatingStatus } = useUpdateContractStatus();
 
 
@@ -54,6 +53,15 @@ const Contracts: React.FC = () => {
     }
   };
 
+
+  const handleCheckSigned = (contract: ContractDataType): boolean => {
+    return contract.recipientLinks.length > 0 &&
+      contract.recipientLinks.some(sign => sign.sign_status === "signed");
+  }
+  const handleCheckAssign = (contract: ContractDataType): boolean => {
+    if(contract.recipientLinks.length > 0 ) return true;
+    return false
+  }
 
   const columns = [{
     id: 'id',
@@ -136,7 +144,8 @@ const Contracts: React.FC = () => {
         {user?.email === contract.createdBy.email && (
           <>
             <button
-              className="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700 hover:bg-yellow-100"
+              className="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700 hover:bg-yellow-100 disabled:opacity-75 disabled:cursor-not-allowed"
+              disabled={handleCheckSigned(contract) || handleCheckAssign(contract)}
               onClick={() => {
                 setIsEditOpen(true);
                 setSelectedContract(contract);
@@ -146,7 +155,8 @@ const Contracts: React.FC = () => {
             </button>
 
             <button
-              className="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+              className="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-75 disabled:cursor-not-allowed"
+              disabled={handleCheckSigned(contract)}
               onClick={() => {
                 setisAssignerOpen(true);
                 setSelectedContract(contract);
@@ -196,6 +206,7 @@ const Contracts: React.FC = () => {
       contract={selectedContract}
       onClose={() => setIsEditOpen(false)}
       onSave={handleSaveEdit}
+      isSave = {isUpdate}
     />
 
     <ContractAssigner

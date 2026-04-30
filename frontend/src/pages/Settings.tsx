@@ -11,6 +11,7 @@ const Settings: React.FC = () => {
 
   const { user, logout } = useAuth();
   const { toast } = useToast();
+  console.log(user)
 
   // ------------------- HANDLERS -------------------
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -187,9 +188,6 @@ const Settings: React.FC = () => {
 
 export default Settings;
 
-//
-// ------------------- Sub Components -------------------
-//
 
 interface SectionProps {
   title: string;

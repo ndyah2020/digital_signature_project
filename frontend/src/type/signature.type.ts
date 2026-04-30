@@ -8,6 +8,7 @@ export interface SignatureType {
     id: number,
     name: string,
     email: string,
+    publicKey: string,
   },
 }
 

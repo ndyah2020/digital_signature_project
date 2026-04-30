@@ -39,11 +39,15 @@ router.post(
 );
 
 // update (PATCH)
-router.patch(
-  "/:id",
-  authMiddleware,
-  requireRole(UserRole.ADMIN, UserRole.SIGNER),
-  (req, res) => controller.update(req, res)
+// router.patch(
+//   "/:id",
+//   authMiddleware,
+//   requireRole(UserRole.ADMIN, UserRole.SIGNER),
+//   (req, res) => controller.update(req, res)
+// );
+
+router.put("/:id", upload.single("file"), authMiddleware, (req, res) =>
+  controller.update(req, res)
 );
 
 // delete

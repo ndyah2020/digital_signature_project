@@ -55,12 +55,13 @@ export class AuthService {
 
     // trả về otpauth_url để client hiển thị QR code (nếu muốn user enable 2FA)
     return {
-      token: signToken({ sub: user.id, email: user.email,  name: user.name, role: user.role }),
+      token: signToken({ sub: user.id, email: user.email,  name: user.name, role: user.role , publicKey: user.publicKey}),
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
+        publicKey: user.publicKey,
       },
       totp: {
         // dùng totp.otpauth_url để client render QR code nếu muốn enable 2FA
@@ -82,6 +83,7 @@ export class AuthService {
       email: user.email,
       name: user.name,
       role: user.role,
+      publicKey: user.publicKey,
     });
     return {
       message: "Đăng nhập thành công",
@@ -91,6 +93,7 @@ export class AuthService {
         name: user.name,
         email: user.email,
         role: user.role,
+        publicKey: user.publicKey,
       },
     };
   }

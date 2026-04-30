@@ -93,7 +93,7 @@ export const useUpdateContract = () => {
     {
       onSuccess: () => {
         toast({
-          title: "✅ Cập nhật hợp đồng thành công!",
+          title: "Cập nhật hợp đồng thành công!",
           description: "Thông tin hợp đồng đã được cập nhật.",
         });
       },
@@ -136,7 +136,7 @@ export const useViewContract = () => {
   return useMutation<Blob, number>(
     viewContract,
     {
-      onSuccess: (data, id) => {
+      onSuccess: ( id) => {
         console.log(`Tải blob thành công cho ID: ${id}`);
       },
       onError: (error) => {
@@ -153,13 +153,13 @@ export const useAddRecipient = () => {
     onSuccess: (_, variables) => {
       toast({
         title: 'Đã thêm người dùng vào hợp đồng',
-        description: `Đã gán ${variables.recipientItems.length} người dùng vào hợp đồng #${variables.contractId}.`,
+        description: `Đã thêm ${variables.recipientItems.length} người dùng vào hợp đồng #${variables.contractId}.`,
       });
     },
     onError: (err: any) => {
       toast({
-        title: 'Lỗi thêm người dùng vào hợp đồng',
-        description: err.message || 'Không thể thêm người dùng vào hợp đồng.',
+        title: 'Lỗi khi gán',
+        description: err.response?.data?.message || err.message || 'Không thể gán người dùng.',
         variant: 'destructive',
       });
     },
