@@ -71,21 +71,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (name: string, email: string, password: string) => {
     const res = await api.post("/auth/register", { name, email, password });
+    const { token } = res.data;
+    if (token) {
+      localStorage.setItem("token", token);
+      setIsAuthenticated(true);
+      checkUserStatus();
+    }
     return res.data;
   };
 
   const decryptPrivateKey = async (password: string): Promise<boolean> => {
-  try {
-    const res = await api.post("/users/check-password",  {password});
-    return res.data.access; 
-    
-  } catch (error) {
-    console.error("Lỗi khi xác thực mật khẩu:", error);
-    return false;
-  }
-};``
-
-
+    try {
+      const res = await api.post("/users/check-password", { password });
+      return res.data.access;
+    } catch (error) {
+      console.error("Lỗi khi xác thực mật khẩu:", error);
+      return false;
+    }
+  };
 
   const value: AuthContextType = {
     user,

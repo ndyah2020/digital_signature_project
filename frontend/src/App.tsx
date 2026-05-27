@@ -13,31 +13,58 @@ import Users from './pages/Users';
 import Roles from './pages/Roles';
 import Logs from './pages/Logs';
 import Settings from './pages/Settings';
+
 export function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
+          {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/" element={<ProtectedRoute>
+
+          {/* Protected routes with Layout */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
                 <Layout />
-              </ProtectedRoute>}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/contracts" element={<Contracts />} />
-            <Route path="/contracts/:id" element={<ContractDetail />} />
-            <Route path="/users" element={<ProtectedRoute requiredRole="admin">
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="contracts" element={<Contracts />} />
+            <Route path="contracts/:id" element={<ContractDetail />} />
+            <Route
+              path="users"
+              element={
+                <ProtectedRoute requiredRole="admin">
                   <Users />
-                {/* </ProtectedRoute>} />
-            <Route path="/roles" element={<ProtectedRoute requiredRole="admin">
-                  <Roles /> */}
-                </ProtectedRoute>} />
-            <Route path="/logs" element={<ProtectedRoute requiredRole="admin">
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="roles"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <Roles />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="logs"
+              element={
+                <ProtectedRoute requiredRole="admin">
                   <Logs />
-                </ProtectedRoute>} />
-            <Route path="/settings" element={<Settings />} />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="settings" element={<Settings />} />
           </Route>
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toaster />
       </Router>

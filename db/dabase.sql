@@ -21,7 +21,7 @@ CREATE TABLE users (
     role TEXT NOT NULL,
     private_key_encrypted TEXT,
     totp_secret TEXT NULL,
-    is_totp_enabled BOOLEAN DEFAULT FALSE 
+    is_totp_enabled BOOLEAN DEFAULT FALSE,
     -- vẫn giữ lại 2 trường này cho trường hợp quên mật khẩu
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

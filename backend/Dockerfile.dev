@@ -1,7 +1,15 @@
 FROM node:23-alpine
+
 WORKDIR /app
+
+# Cài dependencies trước (tận dụng layer cache)
 COPY package*.json ./
 RUN npm install
-COPY . .
+
+# Copy source (sẽ bị override bởi volume mount trong docker-compose.dev.yml)
+COPY tsconfig.json ./
+COPY src ./src
+
 EXPOSE 5000
+
 CMD ["npm", "run", "dev"]

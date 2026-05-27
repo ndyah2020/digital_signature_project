@@ -1,0 +1,77 @@
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: digital-signature-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-postgres}
+      POSTGRES_DB: ${DB_NAME:-signature_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_dev_data:/var/lib/postgresql/data
+      - ./db/dabase.sql:/docker-entrypoint-initdb.d/01_init.sql
+    networks:
+      - app_dev_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-signature_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    container_name: digital-signature-backend-dev
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount source code để hot-reload
+      - ./backend/src:/app/src
+      - ./backend/tsconfig.json:/app/tsconfig.json
+      - uploads_dev_data:/app/uploads
+      # Tránh ghi đè node_modules trong container
+      - /app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_dev_network
+
+  frontend:
+    container_name: digital-signature-frontend-dev
+    image: node:23-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host"
+    environment:
+      # Trong Docker network, frontend container gọi backend qua service name
+      VITE_API_URL: http://backend:5000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - app_dev_network
+
+networks:
+  app_dev_network:
+    driver: bridge
+
+volumes:
+  db_dev_data:
+  uploads_dev_data:
